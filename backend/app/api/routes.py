@@ -3,7 +3,7 @@ from sqlalchemy.orm import Session
 from typing import Optional, Dict, Any
 import logging
 
-from app.models import Vehicle, VehicleAISummary
+from models import Vehicle, VehicleAISummary
 from utils.database import get_db
 from services.vehicle_service import VehicleService
 from utils.schemas import VehicleResponse, VehicleSearchResponse

@@ -1,6 +1,6 @@
 from langchain_openai import AzureChatOpenAI, AzureOpenAIEmbeddings 
 
-from config import settings
+from utils.config import settings
 
 # Azure OpenAI configuration
 AZURE_OPENAI_ENDPOINT = settings.AZURE_OPENAI_ENDPOINT

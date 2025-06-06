@@ -30,7 +30,7 @@ def run_development_server(host="127.0.0.1", port=8000):
     print("-" * 60)
     
     uvicorn.run(
-        "main:app",
+        "app.main:app",
         host=host,
         port=port,
         reload=True,
@@ -47,7 +47,7 @@ def run_production_server(host="0.0.0.0", port=8000, workers=1):
     print("-" * 60)
     
     uvicorn.run(
-        "main:app",
+        "app.main:app",
         host=host,
         port=port,
         workers=workers,
