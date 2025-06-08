@@ -64,7 +64,7 @@ app.add_middleware(
     CORSMiddleware,
     allow_origins=[
         "http://localhost:3000",  
-        "http://localhost:8080",  
+        "http://localhost:5173",  
     ],
     allow_credentials=True,
     allow_methods=["GET", "POST", "PUT", "DELETE"],
@@ -137,6 +137,5 @@ if __name__ == "__main__":
         "main:app", 
         host="0.0.0.0",
         port=8000,
-        reload=True,
         log_level="info"
     )

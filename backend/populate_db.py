@@ -6,7 +6,7 @@ from sqlalchemy import create_engine, Column, Integer, String, Boolean, DateTime
 from sqlalchemy.orm import sessionmaker, declarative_base, relationship
 from sqlalchemy.exc import IntegrityError
 
-DATABASE_URL = "mysql+pymysql://root:sidharth@localhost/vehicleinsights"
+DATABASE_URL = "mysql+pymysql://root:system@localhost/vehicleinsights"
 
 Base = declarative_base()
 
