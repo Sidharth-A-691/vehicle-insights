@@ -38,7 +38,7 @@ class Vehicle(Base):
     tax_status = Column(String(30))
     tax_due_date = Column(Date)
     insurance_group = Column(String(10))
-    euro_status = Column(String(10))
+    euro_status = Column(String(30))
     vehicle_class = Column(String(30))
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
@@ -194,12 +194,12 @@ def generate_vrm():
         # Age identifier: 01-24 for years 2001-2024
         age = f"{random.randint(1, 24):02d}"
         letters = "".join(random.choices("ABCDEFGHIJKLMNOPQRSTUVWXYZ", k=3))
-        return f"{area}{age} {letters}"
+        return f"{area}{age}{letters}"
     else:  # Old format: A123 BCD
         letter1 = random.choice("ABCDEFGHIJKLMNOPQRSTUVWXYZ")
         numbers = "".join(random.choices("123456789", k=random.randint(1,3)))
         letters2 = "".join(random.choices("ABCDEFGHIJKLMNOPQRSTUVWXYZ", k=3))
-        return f"{letter1}{numbers} {letters2}"
+        return f"{letter1}{numbers}{letters2}"
 
 def generate_vin(prefix="SAMPLETESTVIN"):
     return prefix + "".join(random.choices("0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ", k=17-len(prefix)))

@@ -48,7 +48,7 @@ class Vehicle(Base):
     
     # Insurance & Classification
     insurance_group = Column(String(10))  # Insurance group rating
-    euro_status = Column(String(10))  # Euro emissions standard
+    euro_status = Column(String(30))  # Euro emissions standard
     vehicle_class = Column(String(30))  # Classification for regulatory purposes
     
     # Timestamps
