@@ -52,9 +52,10 @@ class VehicleAIService:
     def _setup_chain(self):
         
         prompt_template_str = """
-You are an expert automotive consultant helping a car owner understand their vehicle better. 
-Your role is to translate technical automotive data into clear, actionable insights for someone 
-who may not have extensive car knowledge.
+You are an expert automotive consultant analyzing THIS SPECIFIC VEHICLE'S actual history and data. 
+Your job is to tell the owner what has actually happened to THEIR car and what it means for them.
+
+FOCUS ON THE ACTUAL DATA - don't give generic advice, but specific insights based on what this car has actually experienced.
 
 VEHICLE INFORMATION:
 {vehicle_data}
@@ -71,46 +72,55 @@ RECALL INFORMATION:
 TECHNICAL SPECIFICATIONS:
 {specification_data}
 
-Please provide a comprehensive yet easy-to-understand analysis *strictly* in the following JSON format.
-Do not add any text before or after the JSON object.
+CRITICAL INSTRUCTIONS:
+- Base your analysis on the ACTUAL data provided, not generic knowledge about this car model
+- Reference specific dates, mileage readings, recall numbers, and actual events that happened to this vehicle
+- If there are MOT records, mention what actually happened (pass/fail/advisories) and when
+- If there are recalls, explain what was actually done and when, and what's still outstanding
+- If there are valuation records, reference the actual values and how they've changed
+- Use specific mileage figures, dates, and events from the history
+- Make connections between different data points (e.g., how mileage relates to value changes)
+
+Provide your analysis *strictly* in the following JSON format. Do not add any text before or after the JSON object.
 
 {{
-    "summary": "A friendly, conversational summary of the vehicle in 2-3 paragraphs that a non-technical person can easily understand.",
+    "summary": "A detailed analysis of THIS SPECIFIC VEHICLE based on its actual history, focusing on what has actually happened to it. Reference specific events, dates, mileage, and recalls from the data. Make it conversational but data-driven in 2-3 paragraphs",
     "key_insights": [
-        "List 4-6 key points about this vehicle that the owner should know. Focus on practical aspects like reliability, maintenance, costs, performance."
+        "List 4-5 key insights about what this SPECIFIC vehicle has been through. Reference actual dates, mileage, MOT results, recall completions, service history, etc. and focus on practical aspects like reliability, maintenance, costs, performance.Each insight should be based on the actual data provided."
     ],
-    "owner_advice": "Personalized advice for the current owner about maintaining, using, or understanding their vehicle.",
+    "owner_advice": "Specific advice based on what this car has actually experienced - reference the actual MOT history, completed/outstanding recalls, mileage patterns, service records, etc.",
     "reliability_assessment": {{
-        "score": "Rate 1-10 based on history and known issues. Use 'N/A' if not determinable.",
-        "explanation": "Brief explanation of the reliability rating."
+        "score": "Rate 1-10 based on the ACTUAL history of this specific vehicle (MOT passes/fails, recalls completed, advisory notes, etc.)",
+        "explanation": "Explain the score based on the actual events in this car's history."
     }},
     "value_assessment": {{
-        "current_market_position": "Whether the vehicle holds value well, depreciates quickly, etc.",
-        "factors_affecting_value": "Key factors that impact this vehicle's value."
+        "current_market_position": "Based on the ACTUAL valuation data provided, how has this car's value changed over time? Reference specific figures and dates.",
+        "factors_affecting_value": "What factors from this car's ACTUAL history affect its value (mileage increases, condition grades, MOT history, recall status, etc.)."
     }},
     "attention_items": [
-        "List any immediate or upcoming items that need attention (e.g., 'MOT due by YYYY-MM-DD', 'Outstanding safety recall XXXXX', 'Common issue: Check XYZ'). Be specific."
+        "List specific items based on the actual data: exact MOT due dates, outstanding recall numbers with descriptions, specific advisory notes from MOT history, etc. Be precise with dates, recall numbers, and descriptions."
     ],
     "cost_insights": {{
-        "typical_maintenance": "What to expect for maintenance costs (e.g., 'Average', 'Higher than average for its class').",
-        "insurance_notes": "Notes about insurance costs/group (e.g., 'Insurance group X, typically moderate.').",
-        "fuel_efficiency": "Practical fuel economy information (e.g., 'Expect around XX MPG combined. Good for city driving.')."
+        "typical_maintenance": "Based on this car's actual service history and MOT records, what maintenance patterns are evident?",
+        "insurance_notes": "Reference the actual insurance group from the data and any implications based on the car's specific features and history.",
+        "fuel_efficiency": "Use the actual CO2 emissions and fuel consumption figures from the data, not generic estimates."
     }},
     "technical_highlights": [
-        "List 2-3 key technical features explained in simple terms (e.g., ' turbocharged engine for good acceleration', ' advanced safety system with automatic braking')."
+        "List 2-3 key features of this SPECIFIC vehicle based on the actual specification data provided, not generic model information."
     ]
 }}
 
-GUIDELINES:
-- Use friendly, conversational language.
-- Avoid jargon or explain technical terms simply.
-- Focus on practical implications.
-- Be honest but constructive about issues.
-- Provide actionable advice.
-- Consider vehicle's age, mileage, and condition.
-- Highlight safety recalls or critical issues prominently in 'attention_items' and 'summary'.
-- This is for a vehicle owner, not a buyer.
-- Ensure the entire output is a single, valid JSON object.
+EXAMPLES OF GOOD DATA-SPECIFIC INSIGHTS:
+- "Your car passed its MOT on [actual date] at [actual mileage] with only minor advisories about [specific advisory notes]"
+- "The recall [actual recall number] for [actual issue] was completed on [actual date], improving your car's safety"
+- "Your car's value dropped from £[actual figure] to £[actual figure] between [dates], likely due to the mileage increase from [X] to [Y] miles"
+- "Your next MOT is due on [actual date from data] - mark your calendar"
+- "Outstanding recall [number]: [actual description] - you should contact your dealer about this"
+
+AVOID GENERIC STATEMENTS LIKE:
+- "Peugeot 508s are generally reliable" (talk about THIS car's reliability based on its history)
+- "Sports cars typically have higher insurance" (use the actual insurance group)
+- "Convertibles need special care" (focus on what this specific convertible has experienced)
 """
         self.prompt = ChatPromptTemplate.from_template(prompt_template_str)
         
@@ -148,6 +158,7 @@ GUIDELINES:
         """
         Format vehicle data (received from VehicleService._vehicle_to_dict) for the prompt template.
         The keys in the returned dictionary must match the input_variables of the prompt.
+        Enhanced to provide more structured, detailed formatting for better AI analysis.
         """
         
         def format_section(data_item: Optional[Any], title: str) -> str:
@@ -155,29 +166,64 @@ GUIDELINES:
                 return f"{title}: No data available"
             
             if isinstance(data_item, list): 
-                formatted_items = [self._dict_to_readable_string(item) for item in data_item if isinstance(item, dict)]
+                formatted_items = []
+                for i, item in enumerate(data_item):
+                    if isinstance(item, dict):
+                        item_str = self._dict_to_readable_string(item)
+                        formatted_items.append(f"Record {i+1}: {item_str}")
+                
                 if not formatted_items:
                      return f"{title}: No records found or data in unexpected format"
-                return f"{title}:\n" + "\n- ".join(formatted_items)
+                return f"{title}:\n" + "\n".join(formatted_items)
             elif isinstance(data_item, dict): 
                 return f"{title}:\n{self._dict_to_readable_string(data_item)}"
             else:
                 return f"{title}: Data in unexpected format"
 
+        # Enhanced formatting with more context
+        basic_info = vehicle_data_from_service.get('basic', {})
+        history_records = vehicle_data_from_service.get('history', [])
+        recall_records = vehicle_data_from_service.get('recalls', [])
+        valuation_records = vehicle_data_from_service.get('valuations', [])
+        
+        # Add summary counts and key dates for context
+        context_summary = f"""
+VEHICLE CONTEXT SUMMARY:
+- Vehicle: {basic_info.get('year', 'Unknown')} {basic_info.get('make', 'Unknown')} {basic_info.get('model', 'Unknown')}
+- Current Mileage: {max([h.get('mileage', 0) for h in history_records], default='Unknown')} miles
+- MOT Status: {basic_info.get('mot_status', 'Unknown')} (Expires: {basic_info.get('mot_expiry_date', 'Unknown')})
+- Tax Status: {basic_info.get('tax_status', 'Unknown')} (Due: {basic_info.get('tax_due_date', 'Unknown')})
+- Total History Records: {len(history_records)}
+- Total Recalls: {len(recall_records)} ({len([r for r in recall_records if r.get('recall_status') == 'Completed'])} completed)
+- Valuation Records: {len(valuation_records)}
+        """
+
         return {
-            "vehicle_data": format_section(vehicle_data_from_service.get('basic'), "Basic Vehicle Information"),
-            "valuation_data": format_section(vehicle_data_from_service.get('valuations'), "Valuation History"),
-            "history_data": format_section(vehicle_data_from_service.get('history'), "Vehicle History"),
-            "recall_data": format_section(vehicle_data_from_service.get('recalls'), "Recall Information"),
+            "vehicle_data": context_summary + "\n" + format_section(basic_info, "Basic Vehicle Information"),
+            "valuation_data": format_section(valuation_records, "Valuation History"),
+            "history_data": format_section(history_records, "Vehicle History & MOT Records"),
+            "recall_data": format_section(recall_records, "Recall Information"),
             "specification_data": format_section(vehicle_data_from_service.get('specifications'), "Technical Specifications")
         }
     
     def _dict_to_readable_string(self, data_dict: Dict[str, Any]) -> str:
-        """Convert a single dictionary item to a human-readable string for the prompt."""
+        """Convert a single dictionary item to a human-readable string for the prompt.
+        Enhanced to highlight important fields and provide better context.
+        """
         if not data_dict:
             return "No information available for this item."
         
-        readable_parts = []
+        # Prioritize important fields for different record types
+        priority_fields = {
+            'event_date', 'recall_date', 'valuation_date', 'event_type', 'recall_title', 
+            'pass_fail', 'recall_status', 'mileage', 'retail_value', 'safety_issue',
+            'completion_date', 'advisory_notes', 'recall_description', 'condition_grade'
+        }
+        
+        # Group fields by importance
+        important_parts = []
+        other_parts = []
+        
         for key, value in data_dict.items():
             if value is not None and str(value).strip() != "": 
                 readable_key = key.replace('_', ' ').title()
@@ -187,9 +233,16 @@ GUIDELINES:
                 else:
                     value_str = str(value) 
                 
-                readable_parts.append(f"{readable_key}: {value_str}")
+                field_info = f"{readable_key}: {value_str}"
+                
+                if key in priority_fields:
+                    important_parts.append(field_info)
+                else:
+                    other_parts.append(field_info)
         
-        return " | ".join(readable_parts) if readable_parts else "Item details not available."
+        # Combine with important fields first
+        all_parts = important_parts + other_parts
+        return " | ".join(all_parts) if all_parts else "Item details not available."
     
     def _get_fallback_insights(self, vehicle_data_dict: Dict[str, Any]) -> Dict[str, Any]:
         """Provide fallback insights when AI generation fails or encounters an error."""
