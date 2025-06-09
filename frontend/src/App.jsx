@@ -1,37 +1,146 @@
-import React, { useState, useEffect } from 'react';
-import { Search, RefreshCw, ChevronDown, ChevronUp, Car, FileText, DollarSign, History, AlertTriangle, Settings, Activity } from 'lucide-react';
-import { get, post } from './apiClient'; // Assuming apiClient.js is in the same directory or adjust path
+import React, { useState, useEffect, useRef } from 'react';
+import {
+  Search, RefreshCw, ChevronDown, ChevronUp, Car, FileText, DollarSign, History, AlertTriangle, Settings, Activity,
+  ShieldCheck, Zap, Lightbulb, TrendingUp, Cpu, Award, CheckCircle2, Sparkles, Info,
+  UserCircle, LogOut, Power
+} from 'lucide-react';
+import { get } from './apiClient';
+
+// Navbar Component (remains the same as previous version)
+const Navbar = ({ healthStatus }) => {
+  const [isProfileOpen, setIsProfileOpen] = useState(false);
+  const profileRef = useRef(null);
+  const navbarRef = useRef(null);
+
+  const handleLogoClick = () => {
+    const navElement = document.querySelector('nav');
+    const currentNavbarHeight = navElement ? navElement.offsetHeight : 64;
+    scrollToElement('search-section-top', currentNavbarHeight);
+  };
+
+  const toggleProfileDropdown = () => {
+    setIsProfileOpen(!isProfileOpen);
+  };
+
+  const handleLogout = () => {
+    console.log("User logged out");
+    setIsProfileOpen(false);
+    // Add actual logout logic here
+  };
+
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (profileRef.current && !profileRef.current.contains(event.target)) {
+        setIsProfileOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, []);
+
+  const getApiStatusIndicator = () => {
+    if (healthStatus === 'healthy') return <span className="w-2 h-2 bg-emerald-500 rounded-full inline-block mr-2"></span>;
+    if (healthStatus === 'unhealthy') return <span className="w-2 h-2 bg-rose-500 rounded-full inline-block mr-2"></span>;
+    return <span className="w-2 h-2 bg-amber-500 rounded-full inline-block mr-2 animate-pulse"></span>;
+  };
+
+  return (
+    <nav ref={navbarRef} className="bg-slate-800 shadow-md sticky top-0 z-50">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div className="flex items-center justify-between h-16">
+          <div className="flex items-center cursor-pointer" onClick={handleLogoClick}>
+            <img src="/ust_logo.png" alt="UST Logo" width={30} height={30} />
+            <span className="ml-3 font-semibold text-xl text-slate-200">VehicleIntel</span>
+          </div>
+          <div className="relative" ref={profileRef}>
+            <button
+              onClick={toggleProfileDropdown}
+              className="p-2 rounded-full text-slate-300 hover:text-white hover:bg-slate-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-slate-800 focus:ring-white"
+            >
+              <UserCircle size={26} />
+            </button>
+            {isProfileOpen && (
+              <div className="origin-top-right absolute right-0 mt-2 w-56 rounded-md shadow-lg bg-white ring-1 ring-black ring-opacity-5 focus:outline-none py-1">
+                <div className="px-4 py-2 text-sm text-slate-700 border-b border-slate-200">
+                  <p className="font-medium">Dummy User</p>
+                  <p className="text-xs text-slate-500">dummy.user@example.com</p>
+                </div>
+                <div className="px-4 py-2 text-sm text-slate-700 flex items-center">
+                  {getApiStatusIndicator()}
+                  API: <span className="font-medium ml-1">{healthStatus ? healthStatus.charAt(0).toUpperCase() + healthStatus.slice(1) : 'Checking...'}</span>
+                </div>
+                <button
+                  onClick={handleLogout}
+                  className="w-full text-left block px-4 py-2 text-sm text-slate-700 hover:bg-slate-100 hover:text-slate-900"
+                >
+                  <LogOut size={16} className="inline mr-2 -mt-0.5" />
+                  Logout
+                </button>
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+    </nav>
+  );
+};
+
+const scrollToElement = (elementId, navbarHeight = 64) => {
+  const element = document.getElementById(elementId);
+  if (element) {
+    const elementPosition = element.getBoundingClientRect().top + window.pageYOffset;
+    const offsetPosition = elementPosition - navbarHeight - 16;
+
+    window.scrollTo({
+      top: offsetPosition,
+      behavior: 'smooth'
+    });
+  }
+};
+
 
 const App = () => {
   const [searchQuery, setSearchQuery] = useState('');
-  const [searchType, setSearchType] = useState('vin'); // 'vin' or 'vrn'
+  const [searchType, setSearchType] = useState('vin');
   const [selectedVehicle, setSelectedVehicle] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [healthStatus, setHealthStatus] = useState(null);
+
   const [expandedSections, setExpandedSections] = useState({
-    basic: true,
-    aiInsights: true,
-    valuations: false,
+    basic: true, // Default to true
+    valuations: true, // Default to true, to match 'basic'
     history: false,
     recalls: false,
     specifications: false,
   });
 
-  // Check API health on mount
   useEffect(() => {
     const checkHealth = async () => {
       try {
-        const health = await get('/health'); // Use apiClient.get
+        const health = await get('/health');
         setHealthStatus(health.status);
       } catch (err) {
-        // apiClient interceptor structures error as { status, detail }
         setHealthStatus('unhealthy');
         console.error("Health check error:", err.detail || 'Unknown error');
       }
     };
     checkHealth();
   }, []);
+
+
+  useEffect(() => {
+    if (selectedVehicle) {
+      const navElement = document.querySelector('nav');
+      const currentNavbarHeight = navElement ? navElement.offsetHeight : 64;
+      const timer = setTimeout(() => {
+        scrollToElement('vehicle-card-header', currentNavbarHeight);
+      }, 200);
+      return () => clearTimeout(timer);
+    }
+  }, [selectedVehicle]);
 
   const handleSearch = async (e) => {
     e.preventDefault();
@@ -40,15 +149,28 @@ const App = () => {
     setError(null);
     setSelectedVehicle(null);
 
+    const navElement = document.querySelector('nav');
+    const currentNavbarHeight = navElement ? navElement.offsetHeight : 64;
+
+    setTimeout(() => {
+      scrollToElement('results-area', currentNavbarHeight);
+    }, 100);
+
     try {
       const endpointPath = searchType === 'vin'
         ? `/vehicle/vin/${searchQuery.trim().toUpperCase()}`
         : `/vehicle/vrm/${searchQuery.trim().replace(/\s/g, '').toUpperCase()}`;
       
-      const vehicle = await get(endpointPath); // Use apiClient.get
+      const vehicle = await get(endpointPath);
       setSelectedVehicle(vehicle);
-    } catch (err) {
-      // apiClient interceptor structures error as { status, detail }
+      // When new vehicle data is loaded, ensure basic and valuations are open by default
+      setExpandedSections(prev => ({
+        ...prev,
+        basic: true,
+        valuations: true,
+      }));
+    } catch (err)
+    {
       setError(err.detail || 'Failed to fetch vehicle data');
     } finally {
       setLoading(false);
@@ -57,286 +179,304 @@ const App = () => {
 
   const handleRefreshInsights = async (vehicleId) => {
     if (!selectedVehicle) return;
-
     setLoading(true);
     setError(null);
     try {
-      // Step 1: Call the refresh endpoint (Backend uses GET for this, so we use `get`)
-      await get(`/vehicle/${vehicleId}/refresh-insights`); // Use apiClient.get
-
-      // Step 2: Re-fetch the vehicle data to get updated insights
+      await get(`/vehicle/${vehicleId}/refresh-insights`);
       const endpointPath = selectedVehicle.search_type === 'vin'
         ? `/vehicle/vin/${selectedVehicle.search_term}`
         : `/vehicle/vrm/${selectedVehicle.search_term}`;
       
-      const updatedVehicle = await get(endpointPath); // Use apiClient.get
-      setSelectedVehicle(updatedVehicle);
-
+      const updatedVehicle = await get(endpointPath);
+      setSelectedVehicle(updatedVehicle); 
     } catch (err) {
-      // apiClient interceptor structures error as { status, detail }
       setError(err.detail || 'Failed to refresh insights');
     } finally {
       setLoading(false);
     }
   };
 
+  // MODIFIED toggleSection function
   const toggleSection = (section) => {
-    setExpandedSections((prev) => ({ ...prev, [section]: !prev[section] }));
+    setExpandedSections((prev) => {
+      const newState = !prev[section]; // The new state for the clicked section
+      if (section === 'basic') {
+        return { ...prev, basic: newState, valuations: newState };
+      }
+      if (section === 'valuations') {
+        return { ...prev, basic: newState, valuations: newState };
+      }
+      // For other sections, toggle them independently
+      return { ...prev, [section]: newState };
+    });
   };
 
   const formatCurrency = (value) => {
     return value != null ? `£${Number(value).toLocaleString()}` : 'N/A';
   };
 
+  const getReliabilityScoreColor = (score) => {
+    if (score == null || isNaN(Number(score))) return 'text-slate-500';
+    const numericScore = Number(score);
+    if (numericScore >= 7) return 'text-emerald-600';
+    if (numericScore >= 4) return 'text-amber-600';
+    return 'text-rose-600';
+  };
+
   const renderVehicleDetails = (vehicle) => {
     if (!vehicle || !vehicle.detailed_data || !vehicle.ai_insights) {
-        return <p className="text-center text-red-500">Incomplete vehicle data received.</p>;
+        return <p className="text-center text-red-600">Incomplete vehicle data received.</p>;
     }
     const { detailed_data, ai_insights } = vehicle;
     const { basic, valuations, history, recalls, specifications } = detailed_data;
 
     if (!basic) {
-        return <p className="text-center text-red-500">Basic vehicle information is missing.</p>;
+        return <p className="text-center text-red-600">Basic vehicle information is missing.</p>;
     }
 
     return (
-      <div className="space-y-8">
-        {/* Vehicle Header */}
-        <div className="bg-gradient-to-r from-blue-600 to-purple-600 rounded-2xl p-8 text-white">
+      <div className="space-y-6">
+        <div id="vehicle-card-header" className="bg-gradient-to-br from-slate-700 to-slate-800 rounded-xl p-6 text-white shadow-lg">
           <div className="flex items-center gap-4 mb-4">
-            <Car size={48} />
+            <Car size={40} className="text-sky-300" />
             <div>
-              <h2 className="text-3xl font-bold">{basic.make || 'N/A'} {basic.model || 'N/A'}</h2>
-              <p className="text-blue-100 text-lg">{basic.variant || 'N/A'} • {basic.year || 'N/A'}</p>
+              <h2 className="text-2xl font-bold">{basic.make || 'N/A'} {basic.model || 'N/A'}</h2>
+              <p className="text-slate-300 text-md">{basic.variant || 'N/A'} • {basic.year || 'N/A'}</p>
             </div>
           </div>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-6">
-            <div className="bg-white/10 rounded-lg p-3">
-              <p className="text-blue-100 text-sm">VIN</p>
-              <p className="font-semibold">{basic.vin || 'N/A'}</p>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mt-5">
+            <div className="bg-slate-600/50 rounded-lg p-3">
+              <p className="text-slate-300 text-xs">VIN</p>
+              <p className="font-semibold text-sm">{basic.vin || 'N/A'}</p>
             </div>
-            <div className="bg-white/10 rounded-lg p-3">
-              <p className="text-blue-100 text-sm">VRM</p>
-              <p className="font-semibold">{basic.vrm || 'N/A'}</p>
+            <div className="bg-slate-600/50 rounded-lg p-3">
+              <p className="text-slate-300 text-xs">VRM</p>
+              <p className="font-semibold text-sm">{basic.vrm || 'N/A'}</p>
             </div>
-            <div className="bg-white/10 rounded-lg p-3">
-              <p className="text-blue-100 text-sm">Status</p>
-              <p className="font-semibold">{basic.vehicle_status || 'N/A'}</p>
+            <div className="bg-slate-600/50 rounded-lg p-3">
+              <p className="text-slate-300 text-xs">Status</p>
+              <p className="font-semibold text-sm">{basic.vehicle_status || 'N/A'}</p>
             </div>
-            <div className="bg-white/10 rounded-lg p-3">
-              <p className="text-blue-100 text-sm">Fuel Type</p>
-              <p className="font-semibold">{basic.fuel_type || 'N/A'}</p>
+            <div className="bg-slate-600/50 rounded-lg p-3">
+              <p className="text-slate-300 text-xs">Fuel Type</p>
+              <p className="font-semibold text-sm">{basic.fuel_type || 'N/A'}</p>
             </div>
           </div>
         </div>
 
-        {/* AI Insights */}
-        <div className="bg-white rounded-2xl shadow-lg border border-gray-100">
-          <div className="p-6 border-b border-gray-100">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <Activity className="text-purple-600" size={24} />
-                <h3 className="text-xl font-semibold text-gray-900">AI Insights</h3>
-              </div>
-              <button
-                onClick={() => handleRefreshInsights(vehicle.vehicle_id)}
-                disabled={loading}
-                className="p-2 text-gray-500 hover:text-purple-600 hover:bg-purple-50 rounded-lg transition-colors disabled:opacity-50"
-                title="Refresh AI Insights"
-              >
-                <RefreshCw size={20} className={loading ? 'animate-spin' : ''} />
-              </button>
+        <div className="bg-white rounded-xl shadow-xl border border-slate-200">
+          <div className="p-4 sm:p-6 border-b border-slate-200 flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <Sparkles className="text-sky-500" size={24} />
+              <h3 className="text-xl font-semibold text-slate-800">AI-Powered Insights</h3>
             </div>
+            <button
+              onClick={() => handleRefreshInsights(vehicle.vehicle_id)}
+              disabled={loading}
+              className="p-2 text-slate-500 hover:text-sky-600 hover:bg-sky-100 rounded-md transition-colors disabled:opacity-50"
+              title="Refresh AI Insights"
+            >
+              <RefreshCw size={18} className={loading && selectedVehicle ? 'animate-spin' : ''} />
+            </button>
           </div>
-          <div className="p-6">
-            <div className="prose max-w-none">
-              <p className="text-gray-700 mb-6">{ai_insights.summary || 'Summary not available.'}</p>
-              
-              <div className="grid md:grid-cols-2 gap-6">
-                <div>
-                  <h4 className="font-semibold text-gray-900 mb-3">Key Insights</h4>
-                  {ai_insights.key_insights && ai_insights.key_insights.length > 0 ? (
-                    <ul className="space-y-2">
-                      {ai_insights.key_insights.map((insight, index) => (
-                        <li key={index} className="text-gray-700 text-sm leading-relaxed">• {insight}</li>
-                      ))}
-                    </ul>
-                  ) : <p className="text-gray-500 text-sm">No key insights available.</p>}
-                </div>
-                
-                <div>
-                  <h4 className="font-semibold text-gray-900 mb-3">Owner Advice</h4>
-                  <p className="text-gray-700 text-sm leading-relaxed">{ai_insights.owner_advice || 'No owner advice available.'}</p>
-                </div>
-              </div>
-
-              {ai_insights.attention_items && ai_insights.attention_items.length > 0 && (
-                <div className="mt-6">
-                  <h4 className="font-semibold text-gray-900 mb-3">Attention Items</h4>
-                  <div className="flex flex-wrap gap-2">
-                    {ai_insights.attention_items.map((item, index) => (
-                      <span key={index} className="bg-orange-50 text-orange-700 px-3 py-1 rounded-full text-sm border border-orange-200">
-                        {item}
-                      </span>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              <div className="grid md:grid-cols-3 gap-6 mt-6">
-                <div className="bg-gray-50 rounded-lg p-4">
-                  <h4 className="font-semibold text-gray-900 mb-2">Reliability</h4>
-                  <div className="text-2xl font-bold text-blue-600 mb-1">{ai_insights.reliability_assessment?.score || 'N/A'}/10</div>
-                  <p className="text-gray-600 text-sm">{ai_insights.reliability_assessment?.explanation || 'No explanation.'}</p>
-                </div>
-                
-                <div className="bg-gray-50 rounded-lg p-4">
-                  <h4 className="font-semibold text-gray-900 mb-2">Market Position</h4>
-                  <p className="text-gray-600 text-sm">{ai_insights.value_assessment?.current_market_position || 'N/A'}</p>
-                </div>
-                
-                <div className="bg-gray-50 rounded-lg p-4">
-                  <h4 className="font-semibold text-gray-900 mb-2">Technical Highlights</h4>
-                  {ai_insights.technical_highlights && ai_insights.technical_highlights.length > 0 ? (
-                    <ul className="text-gray-600 text-sm space-y-1">
-                      {ai_insights.technical_highlights.slice(0, 3).map((highlight, index) => ( 
-                        <li key={index}>• {highlight}</li>
-                      ))}
-                    </ul>
-                  ) : <p className="text-gray-600 text-sm">N/A</p>}
-                </div>
+          <div className="p-4 sm:p-6 space-y-6">
+            <div className="p-4 bg-sky-50 border-l-4 border-sky-400 rounded-r-md">
+              <div className="flex items-start">
+                  <Info size={20} className="mr-3 text-sky-500 flex-shrink-0 mt-0.5" />
+                  <p className="text-slate-700 leading-relaxed text-sm">
+                  {ai_insights.summary || 'AI summary is currently unavailable.'}
+                  </p>
               </div>
             </div>
-            
-            <div className="mt-6 pt-4 border-t border-gray-100">
-              <p className="text-gray-500 text-xs">
-                Generated: {ai_insights.generated_at ? new Date(ai_insights.generated_at).toLocaleString() : 'N/A'}
+            <div className="grid md:grid-cols-3 gap-4">
+              <div className="bg-slate-50 rounded-lg p-4 border border-slate-200 hover:shadow-md transition-shadow">
+                <div className="flex items-center mb-1.5">
+                  <ShieldCheck size={18} className="mr-2 text-sky-600" />
+                  <h4 className="font-semibold text-slate-800 text-sm">Reliability</h4>
+                </div>
+                <div className={`text-3xl font-bold mb-1 ${getReliabilityScoreColor(ai_insights.reliability_assessment?.score)}`}>
+                  {ai_insights.reliability_assessment?.score || 'N/A'}
+                  <span className="text-base font-normal text-slate-500">/10</span>
+                </div>
+                <p className="text-slate-600 text-xs leading-snug">{ai_insights.reliability_assessment?.explanation || 'No explanation provided.'}</p>
+              </div>
+              <div className="bg-slate-50 rounded-lg p-4 border border-slate-200 hover:shadow-md transition-shadow">
+                <div className="flex items-center mb-1.5">
+                  <TrendingUp size={18} className="mr-2 text-emerald-600" />
+                  <h4 className="font-semibold text-slate-800 text-sm">Market Position</h4>
+                </div>
+                <p className="text-slate-700 font-medium text-base mt-1">{ai_insights.value_assessment?.current_market_position || 'N/A'}</p>
+              </div>
+              <div className="bg-slate-50 rounded-lg p-4 border border-slate-200 hover:shadow-md transition-shadow">
+                <div className="flex items-center mb-1.5">
+                  <Cpu size={18} className="mr-2 text-slate-600" />
+                  <h4 className="font-semibold text-slate-800 text-sm">Technical Highlights</h4>
+                </div>
+                {ai_insights.technical_highlights && ai_insights.technical_highlights.length > 0 ? (
+                  <ul className="text-slate-600 text-xs space-y-1 mt-2">
+                    {ai_insights.technical_highlights.slice(0, 3).map((highlight, index) => ( 
+                      <li key={index} className="flex items-start">
+                        <span className="mr-1.5 text-sky-500 mt-0.5">•</span>{highlight}
+                      </li>
+                    ))}
+                  </ul>
+                ) : <p className="text-slate-500 text-xs mt-1">No specific technical highlights available.</p>}
+              </div>
+            </div>
+            <div className="grid md:grid-cols-2 gap-x-6 gap-y-5 pt-4 border-t border-slate-100">
+              <div>
+                <div className="flex items-center mb-2">
+                  <Lightbulb size={20} className="mr-2 text-amber-500" />
+                  <h4 className="font-semibold text-slate-800 text-md">Key Insights</h4>
+                </div>
+                {ai_insights.key_insights && ai_insights.key_insights.length > 0 ? (
+                  <ul className="space-y-2">
+                    {ai_insights.key_insights.map((insight, index) => (
+                      <li key={index} className="flex items-start text-slate-600 text-sm leading-relaxed">
+                        <CheckCircle2 size={16} className="mr-2 mt-1 text-emerald-500 flex-shrink-0" />
+                        <span>{insight}</span>
+                      </li>
+                    ))}
+                  </ul>
+                ) : <p className="text-slate-500 text-sm pl-8">No key insights available.</p>}
+              </div>
+              <div>
+                <div className="flex items-center mb-2">
+                  <Award size={20} className="mr-2 text-sky-600" />
+                  <h4 className="font-semibold text-slate-800 text-md">Owner Advice</h4>
+                </div>
+                <p className="text-slate-600 text-sm leading-relaxed pl-8">{ai_insights.owner_advice || 'No specific owner advice available.'}</p>
+              </div>
+            </div>
+            {ai_insights.attention_items && ai_insights.attention_items.length > 0 && (
+              <div className="pt-4 border-t border-slate-100">
+                <div className="flex items-center mb-3">
+                  <AlertTriangle size={20} className="mr-2 text-rose-500" />
+                  <h4 className="font-semibold text-slate-800 text-md">Items Requiring Attention</h4>
+                </div>
+                <div className="flex flex-wrap gap-2 pl-8">
+                  {ai_insights.attention_items.map((item, index) => (
+                    <span key={index} className="bg-rose-50 text-rose-700 px-3 py-1 rounded-full text-xs border border-rose-200 font-medium">
+                      {item}
+                    </span>
+                  ))}
+                </div>
+              </div>
+            )}
+            <div className="mt-5 pt-3 border-t border-slate-100">
+              <p className="text-slate-500 text-xs text-right">
+                Insights generated: {ai_insights.generated_at ? new Date(ai_insights.generated_at).toLocaleString() : 'N/A'}
                 {ai_insights.cached && ' (Cached)'}
               </p>
             </div>
           </div>
         </div>
 
-        {/* Content Sections */}
         <div className="grid lg:grid-cols-2 gap-6">
-          {/* Basic Information */}
-          <div className="bg-white rounded-2xl shadow-lg border border-gray-100">
-            <div className="p-6 border-b border-gray-100">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <FileText className="text-blue-600" size={20} />
-                  <h3 className="text-lg font-semibold text-gray-900">Basic Information</h3>
-                </div>
-                <button
-                  onClick={() => toggleSection('basic')}
-                  className="p-1 text-gray-400 hover:text-gray-600"
-                >
-                  {expandedSections.basic ? <ChevronUp size={20} /> : <ChevronDown size={20} />}
-                </button>
+          <div className="bg-white rounded-xl shadow-lg border border-slate-200">
+            <div
+              className="p-4 sm:p-5 border-b border-slate-200 flex items-center justify-between cursor-pointer hover:bg-slate-50 transition-colors"
+              onClick={() => toggleSection('basic')} // This will now also toggle 'valuations'
+            >
+              <div className="flex items-center gap-3">
+                <FileText className="text-sky-600" size={20} />
+                <h3 className="text-md font-semibold text-slate-800">Basic Information</h3>
               </div>
+              {expandedSections.basic ? <ChevronUp size={20} className="text-slate-500" /> : <ChevronDown size={20} className="text-slate-500" />}
             </div>
             {expandedSections.basic && (
-              <div className="p-6">
-                <div className="grid grid-cols-2 gap-4 text-sm">
-                  <div><span className="text-gray-500">Make:</span><span className="ml-2 font-medium">{basic.make || 'N/A'}</span></div>
-                  <div><span className="text-gray-500">Model:</span><span className="ml-2 font-medium">{basic.model || 'N/A'}</span></div>
-                  <div><span className="text-gray-500">Year:</span><span className="ml-2 font-medium">{basic.year || 'N/A'}</span></div>
-                  <div><span className="text-gray-500">Body Type:</span><span className="ml-2 font-medium">{basic.body_type || 'N/A'}</span></div>
-                  <div><span className="text-gray-500">Fuel Type:</span><span className="ml-2 font-medium">{basic.fuel_type || 'N/A'}</span></div>
-                  <div><span className="text-gray-500">Transmission:</span><span className="ml-2 font-medium">{basic.transmission || 'N/A'}</span></div>
-                  <div><span className="text-gray-500">MOT Status:</span><span className={`ml-2 font-medium ${basic.mot_status === 'Valid' ? 'text-green-600' : 'text-red-600'}`}>{basic.mot_status || 'N/A'}</span></div>
-                  <div><span className="text-gray-500">MOT Expiry:</span><span className="ml-2 font-medium">{basic.mot_expiry_date || 'N/A'}</span></div>
-                  <div><span className="text-gray-500">Tax Status:</span><span className={`ml-2 font-medium ${basic.tax_status === 'Taxed' ? 'text-green-600' : 'text-red-600'}`}>{basic.tax_status || 'N/A'}</span></div>
-                  <div><span className="text-gray-500">Tax Due:</span><span className="ml-2 font-medium">{basic.tax_due_date || 'N/A'}</span></div>
+              <div className="p-4 sm:p-5">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm">
+                  <div><span className="text-slate-500">Make:</span><span className="ml-2 font-medium text-slate-700">{basic.make || 'N/A'}</span></div>
+                  <div><span className="text-slate-500">Model:</span><span className="ml-2 font-medium text-slate-700">{basic.model || 'N/A'}</span></div>
+                  <div><span className="text-slate-500">Year:</span><span className="ml-2 font-medium text-slate-700">{basic.year || 'N/A'}</span></div>
+                  <div><span className="text-slate-500">Body Type:</span><span className="ml-2 font-medium text-slate-700">{basic.body_type || 'N/A'}</span></div>
+                  <div><span className="text-slate-500">Fuel Type:</span><span className="ml-2 font-medium text-slate-700">{basic.fuel_type || 'N/A'}</span></div>
+                  <div><span className="text-slate-500">Transmission:</span><span className="ml-2 font-medium text-slate-700">{basic.transmission || 'N/A'}</span></div>
+                  <div><span className="text-slate-500">MOT Status:</span><span className={`ml-2 font-medium ${basic.mot_status === 'Valid' ? 'text-emerald-600' : 'text-rose-600'}`}>{basic.mot_status || 'N/A'}</span></div>
+                  <div><span className="text-slate-500">MOT Expiry:</span><span className="ml-2 font-medium text-slate-700">{basic.mot_expiry_date || 'N/A'}</span></div>
+                  <div><span className="text-slate-500">Tax Status:</span><span className={`ml-2 font-medium ${basic.tax_status === 'Taxed' ? 'text-emerald-600' : 'text-rose-600'}`}>{basic.tax_status || 'N/A'}</span></div>
+                  <div><span className="text-slate-500">Tax Due:</span><span className="ml-2 font-medium text-slate-700">{basic.tax_due_date || 'N/A'}</span></div>
                 </div>
               </div>
             )}
           </div>
 
-          {/* Valuations */}
-          <div className="bg-white rounded-2xl shadow-lg border border-gray-100">
-            <div className="p-6 border-b border-gray-100">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <DollarSign className="text-green-600" size={20} />
-                  <h3 className="text-lg font-semibold text-gray-900">Valuations</h3>
-                </div>
-                <button
-                  onClick={() => toggleSection('valuations')}
-                  className="p-1 text-gray-400 hover:text-gray-600"
-                >
-                  {expandedSections.valuations ? <ChevronUp size={20} /> : <ChevronDown size={20} />}
-                </button>
+          <div className="bg-white rounded-xl shadow-lg border border-slate-200">
+             <div
+              className="p-4 sm:p-5 border-b border-slate-200 flex items-center justify-between cursor-pointer hover:bg-slate-50 transition-colors"
+              onClick={() => toggleSection('valuations')} // This will now also toggle 'basic'
+            >
+              <div className="flex items-center gap-3">
+                <DollarSign className="text-emerald-600" size={20} />
+                <h3 className="text-md font-semibold text-slate-800">Valuations</h3>
               </div>
+              {expandedSections.valuations ? <ChevronUp size={20} className="text-slate-500" /> : <ChevronDown size={20} className="text-slate-500" />}
             </div>
             {expandedSections.valuations && (
-              <div className="p-6">
+              <div className="p-4 sm:p-5">
                 {valuations && valuations.length > 0 ? (
-                  <div className="space-y-4">
+                  <div className="space-y-3">
                     {valuations.map((val, index) => (
-                      <div key={index} className="border border-gray-200 rounded-lg p-4">
-                        <div className="flex justify-between items-center mb-3">
-                          <span className="font-medium text-gray-900">{val.valuation_date || 'N/A'}</span>
-                          <span className="text-sm text-gray-500">{val.condition_grade || 'N/A'}</span>
+                      <div key={index} className="border border-slate-200 rounded-lg p-3 bg-slate-50/50">
+                        <div className="flex justify-between items-center mb-2">
+                          <span className="font-medium text-slate-800 text-sm">{val.valuation_date || 'N/A'}</span>
+                          <span className="text-xs text-slate-500">{val.condition_grade || 'N/A'}</span>
                         </div>
-                        <div className="grid grid-cols-2 gap-4 text-sm">
-                          <div><span className="text-gray-500">Retail:</span><span className="ml-2 font-medium">{formatCurrency(val.retail_value)}</span></div>
-                          <div><span className="text-gray-500">Trade:</span><span className="ml-2 font-medium">{formatCurrency(val.trade_value)}</span></div>
-                          <div><span className="text-gray-500">Private:</span><span className="ml-2 font-medium">{formatCurrency(val.private_value)}</span></div>
-                          <div><span className="text-gray-500">Auction:</span><span className="ml-2 font-medium">{formatCurrency(val.auction_value)}</span></div>
+                        <div className="grid grid-cols-2 gap-x-4 gap-y-2 text-sm">
+                          <div><span className="text-slate-500">Retail:</span><span className="ml-2 font-medium text-slate-700">{formatCurrency(val.retail_value)}</span></div>
+                          <div><span className="text-slate-500">Trade:</span><span className="ml-2 font-medium text-slate-700">{formatCurrency(val.trade_value)}</span></div>
+                          <div><span className="text-slate-500">Private:</span><span className="ml-2 font-medium text-slate-700">{formatCurrency(val.private_value)}</span></div>
+                          <div><span className="text-slate-500">Auction:</span><span className="ml-2 font-medium text-slate-700">{formatCurrency(val.auction_value)}</span></div>
                         </div>
-                        <div className="mt-2 text-xs text-gray-500">
+                        <div className="mt-1.5 text-xs text-slate-500">
                           Mileage: {val.mileage_at_valuation?.toLocaleString() || 'N/A'} • Source: {val.valuation_source || 'N/A'}
                         </div>
                       </div>
                     ))}
                   </div>
                 ) : (
-                  <p className="text-gray-500 text-center py-4">No valuation data available</p>
+                  <p className="text-slate-500 text-center py-4 text-sm">No valuation data available</p>
                 )}
               </div>
             )}
           </div>
         </div>
 
-        {/* Full Width Sections */}
+        {/* Full Width Sections (History, Recalls, Specifications) */}
+        {/* ... these remain the same as the previous version ... */}
         <div className="space-y-6">
-          {/* History */}
-          <div className="bg-white rounded-2xl shadow-lg border border-gray-100">
-            <div className="p-6 border-b border-gray-100">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <History className="text-blue-600" size={20} />
-                  <h3 className="text-lg font-semibold text-gray-900">History</h3>
-                </div>
-                <button
-                  onClick={() => toggleSection('history')}
-                  className="p-1 text-gray-400 hover:text-gray-600"
-                >
-                  {expandedSections.history ? <ChevronUp size={20} /> : <ChevronDown size={20} />}
-                </button>
+          <div className="bg-white rounded-xl shadow-lg border border-slate-200">
+             <div
+              className="p-4 sm:p-5 border-b border-slate-200 flex items-center justify-between cursor-pointer hover:bg-slate-50 transition-colors"
+              onClick={() => toggleSection('history')}
+            >
+              <div className="flex items-center gap-3">
+                <History className="text-sky-600" size={20} />
+                <h3 className="text-md font-semibold text-slate-800">History</h3>
               </div>
+              {expandedSections.history ? <ChevronUp size={20} className="text-slate-500" /> : <ChevronDown size={20} className="text-slate-500" />}
             </div>
             {expandedSections.history && (
-              <div className="p-6">
+              <div className="p-4 sm:p-5">
                 {history && history.length > 0 ? (
-                  <div className="space-y-4">
+                  <div className="space-y-3">
                     {history.map((record, index) => (
-                      <div key={index} className="border-l-4 border-blue-200 pl-4 py-2">
-                        <div className="flex justify-between items-start mb-2">
+                      <div key={index} className="border-l-4 border-sky-300 pl-3 py-1.5">
+                        <div className="flex justify-between items-start mb-1">
                           <div>
-                            <span className="font-medium text-gray-900">{record.event_type || 'N/A'}</span>
-                            <span className="ml-2 text-gray-500">•</span>
-                            <span className="ml-2 text-gray-600">{record.event_date || 'N/A'}</span>
+                            <span className="font-medium text-slate-800 text-sm">{record.event_type || 'N/A'}</span>
+                            <span className="ml-2 text-slate-400 text-xs">•</span>
+                            <span className="ml-2 text-slate-600 text-sm">{record.event_date || 'N/A'}</span>
                           </div>
                           {record.pass_fail && (
-                            <span className={`px-2 py-1 rounded text-xs font-medium ${record.pass_fail === 'PASS' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>
+                            <span className={`px-2 py-0.5 rounded text-xs font-medium ${record.pass_fail === 'PASS' ? 'bg-emerald-100 text-emerald-800' : 'bg-rose-100 text-rose-800'}`}>
                               {record.pass_fail}
                             </span>
                           )}
                         </div>
-                        <p className="text-gray-700 text-sm">{record.event_description || 'No description.'}</p>
-                        <div className="mt-2 text-xs text-gray-500">
+                        <p className="text-slate-600 text-sm">{record.event_description || 'No description.'}</p>
+                        <div className="mt-1 text-xs text-slate-500">
                           Mileage: {record.mileage?.toLocaleString() || 'N/A'} • Location: {record.location || 'N/A'}
                           {record.cost && ` • Cost: £${record.cost}`}
                         </div>
@@ -344,106 +484,96 @@ const App = () => {
                     ))}
                   </div>
                 ) : (
-                  <p className="text-gray-500 text-center py-4">No history records available</p>
+                  <p className="text-slate-500 text-center py-4 text-sm">No history records available</p>
                 )}
               </div>
             )}
           </div>
 
-          {/* Recalls */}
-          <div className="bg-white rounded-2xl shadow-lg border border-gray-100">
-            <div className="p-6 border-b border-gray-100">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <AlertTriangle className="text-orange-600" size={20} />
-                  <h3 className="text-lg font-semibold text-gray-900">Recalls</h3>
-                </div>
-                <button
-                  onClick={() => toggleSection('recalls')}
-                  className="p-1 text-gray-400 hover:text-gray-600"
-                >
-                  {expandedSections.recalls ? <ChevronUp size={20} /> : <ChevronDown size={20} />}
-                </button>
+          <div className="bg-white rounded-xl shadow-lg border border-slate-200">
+            <div
+              className="p-4 sm:p-5 border-b border-slate-200 flex items-center justify-between cursor-pointer hover:bg-slate-50 transition-colors"
+              onClick={() => toggleSection('recalls')}
+            >
+              <div className="flex items-center gap-3">
+                <AlertTriangle className="text-amber-600" size={20} />
+                <h3 className="text-md font-semibold text-slate-800">Recalls</h3>
               </div>
+              {expandedSections.recalls ? <ChevronUp size={20} className="text-slate-500" /> : <ChevronDown size={20} className="text-slate-500" />}
             </div>
             {expandedSections.recalls && (
-              <div className="p-6">
+              <div className="p-4 sm:p-5">
                 {recalls && recalls.length > 0 ? (
-                  <div className="space-y-4">
+                  <div className="space-y-3">
                     {recalls.map((recall, index) => (
-                      <div key={index} className="border border-orange-200 rounded-lg p-4 bg-orange-50">
-                        <div className="flex justify-between items-start mb-2">
-                          <h4 className="font-medium text-gray-900">{recall.recall_title || 'N/A'}</h4>
-                          <span className="text-sm text-gray-500">{recall.recall_date || 'N/A'}</span>
+                      <div key={index} className="border border-amber-300 rounded-lg p-3 bg-amber-50">
+                        <div className="flex justify-between items-start mb-1">
+                          <h4 className="font-medium text-slate-800 text-sm">{recall.recall_title || 'N/A'}</h4>
+                          <span className="text-xs text-slate-500">{recall.recall_date || 'N/A'}</span>
                         </div>
-                        <p className="text-gray-700 text-sm mb-2">{recall.recall_description || 'No description.'}</p>
-                        <span className={`px-2 py-1 rounded text-xs font-medium ${recall.recall_status === 'Complete' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>
+                        <p className="text-slate-600 text-sm mb-1.5">{recall.recall_description || 'No description.'}</p>
+                        <span className={`px-2 py-0.5 rounded text-xs font-medium ${recall.recall_status === 'Complete' ? 'bg-emerald-100 text-emerald-800' : 'bg-rose-100 text-rose-800'}`}>
                           {recall.recall_status || 'N/A'}
                         </span>
                       </div>
                     ))}
                   </div>
                 ) : (
-                  <div className="text-center py-8">
-                    <Car className="mx-auto text-green-500 mb-2" size={32} /> 
-                    <p className="text-green-600 font-medium">No recalls found</p>
-                    <p className="text-gray-500 text-sm">This vehicle appears to have no outstanding recalls.</p>
+                  <div className="text-center py-6">
+                    <ShieldCheck className="mx-auto text-emerald-500 mb-2" size={28} /> 
+                    <p className="text-emerald-700 font-medium text-sm">No recalls found</p>
+                    <p className="text-slate-500 text-xs">This vehicle appears to have no outstanding recalls.</p>
                   </div>
                 )}
               </div>
             )}
           </div>
 
-          {/* Specifications */}
-          <div className="bg-white rounded-2xl shadow-lg border border-gray-100">
-            <div className="p-6 border-b border-gray-100">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <Settings className="text-gray-600" size={20} />
-                  <h3 className="text-lg font-semibold text-gray-900">Specifications</h3>
-                </div>
-                <button
-                  onClick={() => toggleSection('specifications')}
-                  className="p-1 text-gray-400 hover:text-gray-600"
-                >
-                  {expandedSections.specifications ? <ChevronUp size={20} /> : <ChevronDown size={20} />}
-                </button>
+          <div className="bg-white rounded-xl shadow-lg border border-slate-200">
+            <div
+              className="p-4 sm:p-5 border-b border-slate-200 flex items-center justify-between cursor-pointer hover:bg-slate-50 transition-colors"
+              onClick={() => toggleSection('specifications')}
+            >
+              <div className="flex items-center gap-3">
+                <Settings className="text-slate-600" size={20} />
+                <h3 className="text-md font-semibold text-slate-800">Specifications</h3>
               </div>
+              {expandedSections.specifications ? <ChevronUp size={20} className="text-slate-500" /> : <ChevronDown size={20} className="text-slate-500" />}
             </div>
             {expandedSections.specifications && (
-              <div className="p-6">
+              <div className="p-4 sm:p-5">
                 {specifications ? (
-                  <div className="grid md:grid-cols-3 gap-6">
+                  <div className="grid md:grid-cols-3 gap-x-6 gap-y-4">
                     <div>
-                      <h4 className="font-medium text-gray-900 mb-3">Dimensions</h4>
-                      <div className="space-y-2 text-sm">
-                        <div><span className="text-gray-500">Length:</span><span className="ml-2">{specifications.length_mm || 'N/A'} mm</span></div>
-                        <div><span className="text-gray-500">Width:</span><span className="ml-2">{specifications.width_mm || 'N/A'} mm</span></div>
-                        <div><span className="text-gray-500">Height:</span><span className="ml-2">{specifications.height_mm || 'N/A'} mm</span></div>
-                        <div><span className="text-gray-500">Wheelbase:</span><span className="ml-2">{specifications.wheelbase_mm || 'N/A'} mm</span></div>
+                      <h4 className="font-medium text-slate-800 mb-2 text-sm">Dimensions</h4>
+                      <div className="space-y-1.5 text-xs text-slate-600">
+                        <div><span className="text-slate-500">Length:</span><span className="ml-2">{specifications.length_mm || 'N/A'} mm</span></div>
+                        <div><span className="text-slate-500">Width:</span><span className="ml-2">{specifications.width_mm || 'N/A'} mm</span></div>
+                        <div><span className="text-slate-500">Height:</span><span className="ml-2">{specifications.height_mm || 'N/A'} mm</span></div>
+                        <div><span className="text-slate-500">Wheelbase:</span><span className="ml-2">{specifications.wheelbase_mm || 'N/A'} mm</span></div>
                       </div>
                     </div>
                     <div>
-                      <h4 className="font-medium text-gray-900 mb-3">Performance</h4>
-                      <div className="space-y-2 text-sm">
-                        <div><span className="text-gray-500">Top Speed:</span><span className="ml-2">{specifications.top_speed_mph || 'N/A'} mph</span></div>
-                        <div><span className="text-gray-500">0-60 mph:</span><span className="ml-2">{specifications.acceleration_0_60_mph || 'N/A'} s</span></div>
-                        <div><span className="text-gray-500">Drive Type:</span><span className="ml-2">{specifications.drive_type || 'N/A'}</span></div>
-                        <div><span className="text-gray-500">Max Towing:</span><span className="ml-2">{specifications.max_towing_weight_kg || 'N/A'} kg</span></div>
+                      <h4 className="font-medium text-slate-800 mb-2 text-sm">Performance</h4>
+                      <div className="space-y-1.5 text-xs text-slate-600">
+                        <div><span className="text-slate-500">Top Speed:</span><span className="ml-2">{specifications.top_speed_mph || 'N/A'} mph</span></div>
+                        <div><span className="text-slate-500">0-60 mph:</span><span className="ml-2">{specifications.acceleration_0_60_mph || 'N/A'} s</span></div>
+                        <div><span className="text-slate-500">Drive Type:</span><span className="ml-2">{specifications.drive_type || 'N/A'}</span></div>
+                        <div><span className="text-slate-500">Max Towing:</span><span className="ml-2">{specifications.max_towing_weight_kg || 'N/A'} kg</span></div>
                       </div>
                     </div>
                     <div>
-                      <h4 className="font-medium text-gray-900 mb-3">Capacity</h4>
-                      <div className="space-y-2 text-sm">
-                        <div><span className="text-gray-500">Fuel Tank:</span><span className="ml-2">{specifications.fuel_tank_capacity || 'N/A'} L</span></div>
-                        <div><span className="text-gray-500">Boot:</span><span className="ml-2">{specifications.boot_capacity_litres || 'N/A'} L</span></div>
-                        <div><span className="text-gray-500">Kerb Weight:</span><span className="ml-2">{specifications.kerb_weight_kg || 'N/A'} kg</span></div>
-                        <div><span className="text-gray-500">Gross Weight:</span><span className="ml-2">{specifications.gross_weight_kg || 'N/A'} kg</span></div>
+                      <h4 className="font-medium text-slate-800 mb-2 text-sm">Capacity</h4>
+                      <div className="space-y-1.5 text-xs text-slate-600">
+                        <div><span className="text-slate-500">Fuel Tank:</span><span className="ml-2">{specifications.fuel_tank_capacity || 'N/A'} L</span></div>
+                        <div><span className="text-slate-500">Boot:</span><span className="ml-2">{specifications.boot_capacity_litres || 'N/A'} L</span></div>
+                        <div><span className="text-slate-500">Kerb Weight:</span><span className="ml-2">{specifications.kerb_weight_kg || 'N/A'} kg</span></div>
+                        <div><span className="text-slate-500">Gross Weight:</span><span className="ml-2">{specifications.gross_weight_kg || 'N/A'} kg</span></div>
                       </div>
                     </div>
                   </div>
                 ) : (
-                  <p className="text-gray-500 text-center py-4">No specification data available</p>
+                  <p className="text-slate-500 text-center py-4 text-sm">No specification data available</p>
                 )}
               </div>
             )}
@@ -453,115 +583,109 @@ const App = () => {
     );
   };
 
+  // Main App return
   return (
-    <div className="min-h-screen bg-gray-50">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {/* Header */}
-        <div className="text-center mb-12">
-          <h1 className="text-4xl font-bold text-gray-900 mb-4">Vehicle Insights</h1>
-          <p className="text-xl text-gray-600 max-w-2xl mx-auto">
-            Get comprehensive vehicle information and AI-powered insights using VIN or VRM lookup
-          </p>
-        </div>
+    <div className="min-h-screen bg-slate-100">
+      <Navbar healthStatus={healthStatus} />
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8">
+        
+        <div id="search-section-top" className="grid md:grid-cols-12 gap-8 items-center mb-8 md:mb-12">
+          <div className="md:col-span-5 lg:col-span-6">
+            <h1 className="text-3xl sm:text-4xl font-bold text-slate-800 mb-3">Vehicle Insights</h1>
+            <p className="text-lg text-slate-600">
+              Access detailed vehicle data and AI-driven analysis using VIN or VRM.
+            </p>
+          </div>
 
-        {/* Health Status */}
-        <div className="flex justify-center mb-8">
-          <div className={`px-4 py-2 rounded-full text-sm font-medium ${
-            healthStatus === 'healthy' 
-              ? 'bg-green-100 text-green-800' 
-              : healthStatus === 'unhealthy'
-              ? 'bg-red-100 text-red-800'
-              : 'bg-yellow-100 text-yellow-800'
-          }`}>
-            API Status: {healthStatus || 'Checking...'}
+          <div className="md:col-span-7 lg:col-span-6">
+            <div className="bg-white rounded-xl shadow-xl border border-slate-200 p-6 sm:p-8">
+              <form onSubmit={handleSearch} className="space-y-5">
+                <div className="flex justify-center">
+                  <div className="bg-slate-100 rounded-lg p-1 flex">
+                    <label className={`px-4 py-2 sm:px-5 rounded-md cursor-pointer transition-all font-medium text-sm sm:text-base ${
+                      searchType === 'vin' 
+                        ? 'bg-white text-sky-600 shadow-sm' 
+                        : 'text-slate-600 hover:text-slate-800'
+                    }`}>
+                      <input type="radio" value="vin" checked={searchType === 'vin'} onChange={(e) => setSearchType(e.target.value)} className="sr-only" />
+                      VIN Lookup
+                    </label>
+                    <label className={`px-4 py-2 sm:px-5 rounded-md cursor-pointer transition-all font-medium text-sm sm:text-base ${
+                      searchType === 'vrn' 
+                        ? 'bg-white text-sky-600 shadow-sm' 
+                        : 'text-slate-600 hover:text-slate-800'
+                    }`}>
+                      <input type="radio" value="vrn" checked={searchType === 'vrn'} onChange={(e) => setSearchType(e.target.value)} className="sr-only" />
+                      VRM Lookup
+                    </label>
+                  </div>
+                </div>
+
+                <div className="relative">
+                  <input
+                    type="text"
+                    placeholder={searchType === 'vin' ? 'Enter 17-character VIN' : 'Enter Vehicle Registration'}
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    disabled={loading}
+                    className="w-full px-5 py-3 text-base border border-slate-300 rounded-lg focus:ring-2 focus:ring-sky-500 focus:border-transparent disabled:opacity-60 disabled:cursor-not-allowed"
+                  />
+                  <div className="absolute right-3 top-1/2 transform -translate-y-1/2">
+                    <Search className="text-slate-400" size={20} />
+                  </div>
+                </div>
+
+                <button
+                  type="submit"
+                  disabled={loading || !searchQuery.trim()}
+                  className="w-full bg-gradient-to-r from-sky-500 to-cyan-500 text-white py-3 px-6 rounded-lg font-semibold text-base hover:from-sky-600 hover:to-cyan-600 disabled:opacity-60 disabled:cursor-not-allowed transition-all duration-150 ease-in-out flex items-center justify-center shadow-md hover:shadow-lg"
+                >
+                  {loading && !selectedVehicle ? (
+                    <>
+                      <RefreshCw className="animate-spin mr-2" size={18} /> Searching...
+                    </>
+                  ) : (
+                    'Search Vehicle'
+                  )}
+                </button>
+              </form>
+            </div>
           </div>
         </div>
 
-        {/* Search Form */}
-        <div className="bg-white rounded-2xl shadow-lg border border-gray-100 p-8 mb-8 max-w-2xl mx-auto">
-          <form onSubmit={handleSearch} className="space-y-6">
-            <div className="flex justify-center">
-              <div className="bg-gray-100 rounded-lg p-1 flex">
-                <label className={`px-6 py-2 rounded-md cursor-pointer transition-all font-medium ${
-                  searchType === 'vin' 
-                    ? 'bg-white text-blue-600 shadow-sm' 
-                    : 'text-gray-600 hover:text-gray-900'
-                }`}>
-                  <input type="radio" value="vin" checked={searchType === 'vin'} onChange={(e) => setSearchType(e.target.value)} className="sr-only" />
-                  VIN Lookup
-                </label>
-                <label className={`px-6 py-2 rounded-md cursor-pointer transition-all font-medium ${
-                  searchType === 'vrn' 
-                    ? 'bg-white text-blue-600 shadow-sm' 
-                    : 'text-gray-600 hover:text-gray-900'
-                }`}>
-                  <input type="radio" value="vrn" checked={searchType === 'vrn'} onChange={(e) => setSearchType(e.target.value)} className="sr-only" />
-                  VRN Lookup
-                </label>
-              </div>
-            </div>
-
-            <div className="relative">
-              <input
-                type="text"
-                placeholder={searchType === 'vin' ? 'Enter 17-character VIN' : 'Enter Vehicle Registration Number'}
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                disabled={loading}
-                className="w-full px-6 py-4 text-lg border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:opacity-50 disabled:cursor-not-allowed"
-              />
-              <div className="absolute right-4 top-1/2 transform -translate-y-1/2">
-                <Search className="text-gray-400" size={24} />
-              </div>
-            </div>
-
-            <button
-              type="submit"
-              disabled={loading || !searchQuery.trim()}
-              className="w-full bg-gradient-to-r from-blue-600 to-purple-600 text-white py-4 px-8 rounded-xl font-semibold text-lg hover:from-blue-700 hover:to-purple-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors duration-150 ease-in-out flex items-center justify-center"
-            >
-              {loading && !selectedVehicle ? ( // Show loading specific to main search when no vehicle is selected yet
-                <>
-                  <RefreshCw className="animate-spin mr-2" size={20} /> Searching...
-                </>
-              ) : (
-                'Search Vehicle'
-              )}
-            </button>
-          </form>
-        </div>
-
-        {/* Results Area */}
-        <div className="mt-12">
+        <div id="results-area" className="mt-6 sm:mt-8">
           {loading && !selectedVehicle && ( 
             <div className="flex flex-col justify-center items-center py-10">
-              <RefreshCw className="animate-spin text-blue-600" size={48} />
-              <p className="mt-4 text-xl text-gray-700">Loading vehicle data...</p>
+              <RefreshCw className="animate-spin text-sky-600" size={40} />
+              <p className="mt-4 text-lg text-slate-700">Loading vehicle data...</p>
             </div>
           )}
           {error && !loading && (
-            <div className="bg-red-100 border-l-4 border-red-500 text-red-700 p-6 rounded-lg shadow-md max-w-3xl mx-auto">
+            <div className="bg-rose-50 border-l-4 border-rose-500 text-rose-700 p-4 sm:p-5 rounded-md shadow-md max-w-2xl mx-auto">
               <div className="flex">
-                <div className="py-1"><AlertTriangle className="h-6 w-6 text-red-500 mr-3" /></div>
+                <div className="py-1"><AlertTriangle className="h-5 w-5 text-rose-500 mr-3" /></div>
                 <div>
-                  <p className="font-bold">Error</p>
-                  <p>{error}</p>
+                  <p className="font-bold text-sm">Error</p>
+                  <p className="text-sm">{error}</p>
                 </div>
               </div>
             </div>
           )}
-          {selectedVehicle && ( // Render vehicle details if available, loading state for refresh is handled within renderVehicleDetails' refresh button
+          {selectedVehicle && (
             renderVehicleDetails(selectedVehicle)
           )}
-          {!loading && !error && !selectedVehicle && !searchQuery.trim() && (
-             <div className="text-center text-gray-500 py-10">
-                <Car size={64} className="mx-auto mb-4 text-gray-400" />
-                <p className="text-lg">Enter a VIN or VRM to begin your search.</p>
-                <p className="text-sm mt-2">Example VIN: SAMPLETESTVINURFY, Example VRM: AB05IYG</p>
+          {!loading && !error && !selectedVehicle && (
+             <div className="text-center text-slate-500 py-10">
+                <Car size={56} className="mx-auto mb-4 text-slate-400" />
+                <p className="text-md">Enter a VIN or VRM to begin your search.</p>
+                <p className="text-xs mt-2">Example VIN: SAMPLETESTVINURFY, Example VRM: AB05IYG</p>
              </div>
           )}
         </div>
       </div>
+       <footer className="text-center py-6 border-t border-slate-200 mt-12">
+        <p className="text-sm text-slate-500">© {new Date().getFullYear()} VehicleIntel. All rights reserved.</p>
+      </footer>
     </div>
   );
 };
