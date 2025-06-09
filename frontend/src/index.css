@@ -1,6 +1,6 @@
 @import "tailwindcss";
 
-html, body {
+/* html, body {
   overscroll-behavior: contain;
   position: fixed;
   top: 0;
@@ -39,4 +39,4 @@ html, body {
 
 ::-webkit-scrollbar-thumb:hover {
   background: #555;
-}
+} */
