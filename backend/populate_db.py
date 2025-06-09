@@ -1,7 +1,6 @@
 import os
 import random
 from datetime import datetime, timedelta, date
-from faker import Faker
 from sqlalchemy import create_engine, Column, Integer, String, Boolean, DateTime, Float, Text, ForeignKey, Date, Index
 from sqlalchemy.orm import sessionmaker, declarative_base, relationship
 from sqlalchemy.exc import IntegrityError
@@ -140,8 +139,6 @@ class VehicleAISummary(Base):
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
     vehicle = relationship("Vehicle", back_populates="ai_summary")
 
-fake = Faker('en_GB') 
-
 NUM_VEHICLES = 100
 
 makes_models = {
@@ -162,6 +159,14 @@ makes_models = {
     "Renault": ["Clio", "Captur", "Megane"]
 }
 
+# Realistic vehicle trim levels and variants
+realistic_variants = [
+    "Base", "SE", "SEL", "Titanium", "ST-Line", "Vignale", "RS",
+    "S Line", "Sport", "Black Edition", "Premium", "Luxury", "R-Line",
+    "AMG Line", "M Sport", "xDrive", "quattro", "4MATIC", "HSE", "Dynamic",
+    "Inscription", "Polestar", "GT Line", "First Edition", "Limited Edition"
+]
+
 # UK fuel terminology - keeping "Petrol" not "Gasoline"
 fuel_types = ["Petrol", "Diesel", "Hybrid", "Electric"]
 transmissions = ["Manual", "Automatic", "CVT"]
@@ -173,6 +178,89 @@ valuation_sources = ["Dealer System", "Online Valuator", "Auction Data", "Insura
 history_event_types = ["MOT", "Service", "Repair", "Sale", "Import", "V5C Issued"]
 recall_statuses = ["Outstanding", "Completed", "Not Applicable"]
 drive_types = ["FWD", "RWD", "AWD", "4WD"]
+
+# Realistic UK cities and service locations
+uk_cities = [
+    "London", "Birmingham", "Manchester", "Leeds", "Liverpool", "Sheffield", 
+    "Bristol", "Newcastle", "Nottingham", "Cardiff", "Leicester", "Coventry",
+    "Bradford", "Edinburgh", "Belfast", "Brighton", "Hull", "Plymouth",
+    "Stoke-on-Trent", "Wolverhampton", "Derby", "Southampton", "Portsmouth",
+    "Aberdeen", "Swansea", "Dundee", "York", "Peterborough", "Oldham"
+]
+
+# Realistic MOT advisory notes
+mot_advisories = [
+    "Nearside front tyre worn close to legal limit",
+    "Offside rear brake disc slightly corroded",
+    "Front windscreen stone chip - attention required",
+    "Exhaust system slightly corroded but not affecting emissions",
+    "Oil leak but not excessive",
+    "Rear wiper blade perished",
+    "Nearside headlamp alignment slightly off",
+    "Brake fluid level low - topped up during test",
+    "Battery terminals corroded",
+    "Minor oil leak from engine - monitor closely",
+    "Handbrake travel excessive but within limits",
+    "Suspension arm bush worn but not affecting safety",
+    "Door mirror glass cracked",
+    "Number plate lamp not working - bulb replaced",
+    "Tyre pressure monitoring system warning light on"
+]
+
+# Realistic service descriptions
+service_descriptions = [
+    "Annual service completed - oil and filter changed",
+    "Major service including brake fluid replacement",
+    "Minor service and safety inspection",
+    "Oil change and basic health check",
+    "Brake service - pads and discs replaced",
+    "Clutch replacement completed",
+    "Timing belt replacement due to age",
+    "Battery replacement - old battery failed",
+    "Tyre replacement - worn beyond legal limit",
+    "Air conditioning service and re-gas",
+    "Exhaust system repair completed",
+    "Suspension component replacement",
+    "Wheel alignment adjustment",
+    "Windscreen replacement due to damage",
+    "Electrical fault diagnosis and repair"
+]
+
+# Realistic recall titles and descriptions
+recall_data = [
+    {
+        "title": "Engine Management Software Update",
+        "description": "Software update required for engine control unit to prevent potential stalling in certain driving conditions. No safety risk identified but may affect vehicle performance."
+    },
+    {
+        "title": "Airbag Inflator Replacement",
+        "description": "Driver airbag inflator may produce excessive force during deployment. Replacement of airbag unit required as precautionary measure to ensure occupant safety."
+    },
+    {
+        "title": "Brake Servo Inspection",
+        "description": "Brake servo unit may develop internal fault leading to reduced braking assistance. Inspection and potential replacement required to maintain safe braking performance."
+    },
+    {
+        "title": "Seat Belt Pre-tensioner Check",
+        "description": "Front seat belt pre-tensioners may not deploy correctly in collision. Inspection of mechanism required with replacement if necessary to ensure occupant protection."
+    },
+    {
+        "title": "Fuel System Component Replacement",
+        "description": "Fuel pump component may fail prematurely causing engine to stall. Replacement of affected component required to prevent potential breakdown."
+    },
+    {
+        "title": "Electronic Stability Control Update",
+        "description": "ESC system software requires update to improve vehicle stability in adverse conditions. Software update available at authorized dealers."
+    },
+    {
+        "title": "Door Lock Actuator Inspection",
+        "description": "Central locking actuator may fail causing doors not to lock properly. Inspection and replacement of faulty actuators required for security."
+    },
+    {
+        "title": "Headlamp Adjustment Check",
+        "description": "Headlamp beam pattern may be incorrect due to manufacturing variance. Adjustment required to ensure proper road illumination and prevent dazzling oncoming traffic."
+    }
+]
 
 # Insurance group premiums by make (for more realistic data)
 make_premium_multiplier = {
@@ -210,6 +298,16 @@ def get_realistic_annual_mileage():
         [3000, 6000, 8000, 12000, 18000, 25000],  
         weights=[10, 20, 35, 25, 8, 2]  
     )[0]
+
+def get_realistic_location():
+    """Generate realistic UK service location."""
+    city = random.choice(uk_cities)
+    street_types = ["Road", "Street", "Avenue", "Lane", "Close", "Drive", "Way", "Gardens"]
+    street_names = ["High", "Church", "Mill", "School", "Park", "Victoria", "Queen", "King", 
+                   "Station", "Manor", "Oak", "Elm", "Rose", "Hill", "New", "Old"]
+    
+    street = f"{random.choice(street_names)} {random.choice(street_types)}"
+    return f"{city}, {street}"
 
 def calculate_insurance_group(make, engine_size, fuel_type, body_type, engine_power_hp):
     """Calculate more realistic insurance groups."""
@@ -327,7 +425,7 @@ def populate_data():
         doors_val = random.choice([2,3,4,5]) if body not in ["Coupe", "Convertible"] else random.choice([2,3])
         seats_val = random.choice([2,4,5,7]) if body != "Coupe" else random.choice([2,4])
         
-        # Engine specifications - FIXED the lambda function issue
+        # Engine specifications
         fuel = random.choice(fuel_types)
         if fuel == "Electric":
             engine_s = 0.0
@@ -338,7 +436,7 @@ def populate_data():
         
         kw_val = int(hp_val * 0.7457)  # Convert HP to KW properly
         
-        # Physical dimensions - FIXED the lambda function issue
+        # Physical dimensions
         kerb_weight_val = random.randint(900, 2500)
         gross_weight_val = kerb_weight_val + random.randint(300, 800)
         
@@ -365,7 +463,7 @@ def populate_data():
             vrm=vrm,
             make=make,
             model=model_name,
-            variant=fake.word().capitalize() + " " + random.choice(["Spec", "Trim", "Edition", "Line"]),
+            variant=random.choice(realistic_variants),
             year=year,
             registration_date=registration_date_val,
             engine_size=engine_s,
@@ -467,10 +565,10 @@ def populate_data():
                     event_type="MOT",
                     event_description="First MOT Test",
                     mileage=current_mileage_hist,
-                    location=fake.city() + ", " + fake.street_name(),
+                    location=get_realistic_location(),
                     source="DVSA Record",
-                    pass_fail="PASS" if random.random() > 0.1 else "FAIL",  
-                    advisory_notes=fake.sentence(nb_words=random.randint(5,15)) if random.random() > 0.5 else None,
+                    pass_fail="PASS" if random.random() > 0.1 else "FAIL",
+                    advisory_notes=random.choice(mot_advisories) if random.random() > 0.5 else None,
                     cost=None
                 )
                 db.add(history_record)
@@ -497,19 +595,22 @@ def populate_data():
             cost_val = None
 
             if event_type_val == "MOT":
-                pass_fail_val = "PASS" if random.random() > 0.25 else "FAIL"  
-                if random.random() > 0.4:
-                    advisory = fake.sentence(nb_words=random.randint(5,15))
+                pass_fail_val = "PASS" if random.random() > 0.25 else "FAIL"
+                advisory = random.choice(mot_advisories) if random.random() > 0.4 else None
+                event_description = "MOT Test"
             elif event_type_val in ["Service", "Repair"]:
-                cost_val = round(random.uniform(50, 1000),2)
+                cost_val = round(random.uniform(50, 1000), 2)
+                event_description = random.choice(service_descriptions)
+            else:
+                event_description = f"{event_type_val} Event"
 
             history_record = VehicleHistory(
                 vehicle_id=vehicle.id,
                 event_date=event_date_val,
                 event_type=event_type_val,
-                event_description=fake.sentence(nb_words=random.randint(3,10)),
+                event_description=event_description,
                 mileage=current_mileage_hist,
-                location=fake.city() + ", " + fake.street_name(),
+                location=get_realistic_location(),
                 source=random.choice(["DVSA Record", "Garage Invoice", "Service Book", "Owner Input"]),
                 pass_fail=pass_fail_val,
                 advisory_notes=advisory,
@@ -519,10 +620,11 @@ def populate_data():
             last_event_date = event_date_val
 
         # Vehicle recalls (40% chance)
-        if random.random() < 0.4: 
-            for _ in range(random.randint(1,2)):
+        if random.random() < 0.4:
+            for _ in range(random.randint(1, 2)):
                 recall_date_val = random_date(registration_date_val, date.today() - timedelta(days=60))
-                is_safety = random.choice([True, False])
+                recall_item = random.choice(recall_data)
+                is_safety = "safety" in recall_item["description"].lower()
                 status = random.choice(recall_statuses)
                 completion = None
                 if status == "Completed":
@@ -530,18 +632,18 @@ def populate_data():
 
                 recall = VehicleRecall(
                     vehicle_id=vehicle.id,
-                    recall_number="R/" + str(year) + "/" + str(random.randint(100,999)).zfill(3),
+                    recall_number=f"R/{year}/{str(random.randint(100, 999)).zfill(3)}",
                     recall_date=recall_date_val,
-                    recall_title=fake.catch_phrase() + " Check/Replacement",
-                    recall_description=fake.paragraph(nb_sentences=2),
+                    recall_title=recall_item["title"],
+                    recall_description=recall_item["description"],
                     safety_issue=is_safety,
                     recall_status=status,
                     completion_date=completion,
                     issuing_authority=random.choice(["DVSA", "Manufacturer"]),
-                    manufacturer_campaign="CAMP-" + "".join(random.choices("0123456789ABCDEF", k=6))
+                    manufacturer_campaign=f"CAMP-{''.join(random.choices('0123456789ABCDEF', k=6))}"
                 )
                 db.add(recall)
-        
+
         try:
             db.commit()
         except Exception as e:
@@ -557,4 +659,3 @@ if __name__ == "__main__":
     print("Starting data population...")
     populate_data()
     print("Data population finished.")
-    
