@@ -2,11 +2,11 @@ import React, { useState, useEffect, useRef } from 'react';
 import {
   Search, RefreshCw, ChevronDown, ChevronUp, Car, FileText, DollarSign, History, AlertTriangle, Settings, Activity,
   ShieldCheck, Zap, Lightbulb, TrendingUp, Cpu, Award, CheckCircle2, Sparkles, Info,
-  UserCircle, LogOut, Power
+  UserCircle, LogOut, Power, Users, Shield, BarChart, CreditCard, Gavel
 } from 'lucide-react';
 import { get } from './apiClient';
 
-// Navbar Component (remains the same as previous version)
+// Navbar Component (unchanged)
 const Navbar = ({ healthStatus }) => {
   const [isProfileOpen, setIsProfileOpen] = useState(false);
   const profileRef = useRef(null);
@@ -100,7 +100,6 @@ const scrollToElement = (elementId, navbarHeight = 64) => {
   }
 };
 
-
 const App = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [searchType, setSearchType] = useState('vin');
@@ -110,11 +109,18 @@ const App = () => {
   const [healthStatus, setHealthStatus] = useState(null);
 
   const [expandedSections, setExpandedSections] = useState({
-    basic: true, // Default to true
-    valuations: true, // Default to true, to match 'basic'
-    history: false,
-    recalls: false,
-    specifications: false,
+    basic: true,
+    valuations: true,
+    history: true,
+    recalls: true,
+    specifications: true,
+    cost_insights: true,
+    ownership_history: true,
+    theft_records: true,
+    insurance_claims: true,
+    mileage_records: true,
+    finance_records: true,
+    auction_records: true,
   });
 
   useEffect(() => {
@@ -129,7 +135,6 @@ const App = () => {
     };
     checkHealth();
   }, []);
-
 
   useEffect(() => {
     if (selectedVehicle) {
@@ -163,14 +168,21 @@ const App = () => {
       
       const vehicle = await get(endpointPath);
       setSelectedVehicle(vehicle);
-      // When new vehicle data is loaded, ensure basic and valuations are open by default
-      setExpandedSections(prev => ({
-        ...prev,
+      setExpandedSections({
         basic: true,
         valuations: true,
-      }));
-    } catch (err)
-    {
+        history: true,
+        recalls: true,
+        specifications: true,
+        cost_insights: true,
+        ownership_history: true,
+        theft_records: true,
+        insurance_claims: true,
+        mileage_records: true,
+        finance_records: true,
+        auction_records: true,
+      });
+    } catch (err) {
       setError(err.detail || 'Failed to fetch vehicle data');
     } finally {
       setLoading(false);
@@ -196,23 +208,18 @@ const App = () => {
     }
   };
 
-  // MODIFIED toggleSection function
   const toggleSection = (section) => {
     setExpandedSections((prev) => {
-      const newState = !prev[section]; // The new state for the clicked section
-      if (section === 'basic') {
+      const newState = !prev[section];
+      if (section === 'basic' || section === 'valuations') {
         return { ...prev, basic: newState, valuations: newState };
       }
-      if (section === 'valuations') {
-        return { ...prev, basic: newState, valuations: newState };
-      }
-      // For other sections, toggle them independently
       return { ...prev, [section]: newState };
     });
   };
 
   const formatCurrency = (value) => {
-    return value != null ? `£${Number(value).toLocaleString()}` : 'N/A';
+    return value != null ? `£${Number(value).toLocaleString('en-GB', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : 'N/A';
   };
 
   const getReliabilityScoreColor = (score) => {
@@ -225,13 +232,13 @@ const App = () => {
 
   const renderVehicleDetails = (vehicle) => {
     if (!vehicle || !vehicle.detailed_data || !vehicle.ai_insights) {
-        return <p className="text-center text-red-600">Incomplete vehicle data received.</p>;
+      return <p className="text-center text-red-600">Incomplete vehicle data received.</p>;
     }
     const { detailed_data, ai_insights } = vehicle;
-    const { basic, valuations, history, recalls, specifications } = detailed_data;
+    const { basic, valuations, history, recalls, specifications, ownership_history, theft_records, insurance_claims, mileage_records, finance_records, auction_records } = detailed_data;
 
     if (!basic) {
-        return <p className="text-center text-red-600">Basic vehicle information is missing.</p>;
+      return <p className="text-center text-red-600">Basic vehicle information is missing.</p>;
     }
 
     return (
@@ -282,10 +289,10 @@ const App = () => {
           <div className="p-4 sm:p-6 space-y-6">
             <div className="p-4 bg-sky-50 border-l-4 border-sky-400 rounded-r-md">
               <div className="flex items-start">
-                  <Info size={20} className="mr-3 text-sky-500 flex-shrink-0 mt-0.5" />
-                  <p className="text-slate-700 leading-relaxed text-sm">
+                <Info size={20} className="mr-3 text-sky-500 flex-shrink-0 mt-0.5" />
+                <p className="text-slate-700 leading-relaxed text-sm">
                   {ai_insights.summary || 'AI summary is currently unavailable.'}
-                  </p>
+                </p>
               </div>
             </div>
             <div className="grid md:grid-cols-3 gap-4">
@@ -306,6 +313,7 @@ const App = () => {
                   <h4 className="font-semibold text-slate-800 text-sm">Market Position</h4>
                 </div>
                 <p className="text-slate-700 font-medium text-base mt-1">{ai_insights.value_assessment?.current_market_position || 'N/A'}</p>
+                <p className="text-slate-600 text-xs mt-1">{ai_insights.value_assessment?.factors_affecting_value || 'No factors provided.'}</p>
               </div>
               <div className="bg-slate-50 rounded-lg p-4 border border-slate-200 hover:shadow-md transition-shadow">
                 <div className="flex items-center mb-1.5">
@@ -363,6 +371,19 @@ const App = () => {
                 </div>
               </div>
             )}
+            {ai_insights.cost_insights && (
+              <div className="pt-4 border-t border-slate-100">
+                <div className="flex items-center mb-2">
+                  <DollarSign size={20} className="mr-2 text-emerald-600" />
+                  <h4 className="font-semibold text-slate-800 text-md">Cost Insights</h4>
+                </div>
+                <div className="text-slate-600 text-sm leading-relaxed pl-8">
+                  <p><strong>Maintenance:</strong> {ai_insights.cost_insights.typical_maintenance || 'N/A'}</p>
+                  <p className="mt-2"><strong>Insurance:</strong> {ai_insights.cost_insights.insurance_notes || 'N/A'}</p>
+                  <p className="mt-2"><strong>Fuel Efficiency:</strong> {ai_insights.cost_insights.fuel_efficiency || 'N/A'}</p>
+                </div>
+              </div>
+            )}
             <div className="mt-5 pt-3 border-t border-slate-100">
               <p className="text-slate-500 text-xs text-right">
                 Insights generated: {ai_insights.generated_at ? new Date(ai_insights.generated_at).toLocaleString() : 'N/A'}
@@ -376,7 +397,7 @@ const App = () => {
           <div className="bg-white rounded-xl shadow-lg border border-slate-200">
             <div
               className="p-4 sm:p-5 border-b border-slate-200 flex items-center justify-between cursor-pointer hover:bg-slate-50 transition-colors"
-              onClick={() => toggleSection('basic')} // This will now also toggle 'valuations'
+              onClick={() => toggleSection('basic')}
             >
               <div className="flex items-center gap-3">
                 <FileText className="text-sky-600" size={20} />
@@ -397,15 +418,19 @@ const App = () => {
                   <div><span className="text-slate-500">MOT Expiry:</span><span className="ml-2 font-medium text-slate-700">{basic.mot_expiry_date || 'N/A'}</span></div>
                   <div><span className="text-slate-500">Tax Status:</span><span className={`ml-2 font-medium ${basic.tax_status === 'Taxed' ? 'text-emerald-600' : 'text-rose-600'}`}>{basic.tax_status || 'N/A'}</span></div>
                   <div><span className="text-slate-500">Tax Due:</span><span className="ml-2 font-medium text-slate-700">{basic.tax_due_date || 'N/A'}</span></div>
+                  <div><span className="text-slate-500">Engine Size:</span><span className="ml-2 font-medium text-slate-700">{basic.engine_size || 'N/A'} L</span></div>
+                  <div><span className="text-slate-500">Power:</span><span className="ml-2 font-medium text-slate-700">{basic.engine_power_hp || 'N/A'} HP</span></div>
+                  <div><span className="text-slate-500">CO2 Emissions:</span><span className="ml-2 font-medium text-slate-700">{basic.co2_emissions || 'N/A'} g/km</span></div>
+                  <div><span className="text-slate-500">Insurance Group:</span><span className="ml-2 font-medium text-slate-700">{basic.insurance_group || 'N/A'}</span></div>
                 </div>
               </div>
             )}
           </div>
 
           <div className="bg-white rounded-xl shadow-lg border border-slate-200">
-             <div
+            <div
               className="p-4 sm:p-5 border-b border-slate-200 flex items-center justify-between cursor-pointer hover:bg-slate-50 transition-colors"
-              onClick={() => toggleSection('valuations')} // This will now also toggle 'basic'
+              onClick={() => toggleSection('valuations')}
             >
               <div className="flex items-center gap-3">
                 <DollarSign className="text-emerald-600" size={20} />
@@ -430,7 +455,7 @@ const App = () => {
                           <div><span className="text-slate-500">Auction:</span><span className="ml-2 font-medium text-slate-700">{formatCurrency(val.auction_value)}</span></div>
                         </div>
                         <div className="mt-1.5 text-xs text-slate-500">
-                          Mileage: {val.mileage_at_valuation?.toLocaleString() || 'N/A'} • Source: {val.valuation_source || 'N/A'}
+                          Mileage: {val.mileage_at_valuation?.toLocaleString() || 'N/A'} • Source: {val.valuation_source || 'N/A'} • Confidence: {(val.confidence_score * 100).toFixed(0)}%
                         </div>
                       </div>
                     ))}
@@ -443,11 +468,9 @@ const App = () => {
           </div>
         </div>
 
-        {/* Full Width Sections (History, Recalls, Specifications) */}
-        {/* ... these remain the same as the previous version ... */}
         <div className="space-y-6">
           <div className="bg-white rounded-xl shadow-lg border border-slate-200">
-             <div
+            <div
               className="p-4 sm:p-5 border-b border-slate-200 flex items-center justify-between cursor-pointer hover:bg-slate-50 transition-colors"
               onClick={() => toggleSection('history')}
             >
@@ -478,7 +501,7 @@ const App = () => {
                         <p className="text-slate-600 text-sm">{record.event_description || 'No description.'}</p>
                         <div className="mt-1 text-xs text-slate-500">
                           Mileage: {record.mileage?.toLocaleString() || 'N/A'} • Location: {record.location || 'N/A'}
-                          {record.cost && ` • Cost: £${record.cost}`}
+                          {record.cost && ` • Cost: ${formatCurrency(record.cost)}`}
                         </div>
                       </div>
                     ))}
@@ -512,9 +535,12 @@ const App = () => {
                           <span className="text-xs text-slate-500">{recall.recall_date || 'N/A'}</span>
                         </div>
                         <p className="text-slate-600 text-sm mb-1.5">{recall.recall_description || 'No description.'}</p>
-                        <span className={`px-2 py-0.5 rounded text-xs font-medium ${recall.recall_status === 'Complete' ? 'bg-emerald-100 text-emerald-800' : 'bg-rose-100 text-rose-800'}`}>
-                          {recall.recall_status || 'N/A'}
-                        </span>
+                        <div className="flex justify-between items-center">
+                          <span className={`px-2 py-0.5 rounded text-xs font-medium ${recall.recall_status === 'Complete' ? 'bg-emerald-100 text-emerald-800' : 'bg-rose-100 text-rose-800'}`}>
+                            {recall.recall_status || 'N/A'}
+                          </span>
+                          <span className="text-xs text-slate-500">Campaign: {recall.manufacturer_campaign || 'N/A'}</span>
+                        </div>
                       </div>
                     ))}
                   </div>
@@ -571,9 +597,261 @@ const App = () => {
                         <div><span className="text-slate-500">Gross Weight:</span><span className="ml-2">{specifications.gross_weight_kg || 'N/A'} kg</span></div>
                       </div>
                     </div>
+                    <div>
+                      <h4 className="font-medium text-slate-800 mb-2 text-sm">Safety & Systems</h4>
+                      <div className="space-y-1.5 text-xs text-slate-600">
+                        <div><span className="text-slate-500">Airbags:</span><span className="ml-2">{specifications.airbags || 'N/A'}</span></div>
+                        <div><span className="text-slate-500">ABS:</span><span className="ml-2">{specifications.abs ? 'Yes' : 'No'}</span></div>
+                        <div><span className="text-slate-500">ESP:</span><span className="ml-2">{specifications.esp ? 'Yes' : 'No'}</span></div>
+                        <div><span className="text-slate-500">Steering:</span><span className="ml-2">{specifications.steering_type || 'N/A'}</span></div>
+                      </div>
+                    </div>
                   </div>
                 ) : (
                   <p className="text-slate-500 text-center py-4 text-sm">No specification data available</p>
+                )}
+              </div>
+            )}
+          </div>
+
+          <div className="bg-white rounded-xl shadow-lg border border-slate-200">
+            <div
+              className="p-4 sm:p-5 border-b border-slate-200 flex items-center justify-between cursor-pointer hover:bg-slate-50 transition-colors"
+              onClick={() => toggleSection('ownership_history')}
+            >
+              <div className="flex items-center gap-3">
+                <Users className="text-sky-600" size={20} />
+                <h3 className="text-md font-semibold text-slate-800">Ownership History</h3>
+              </div>
+              {expandedSections.ownership_history ? <ChevronUp size={20} className="text-slate-500" /> : <ChevronDown size={20} className="text-slate-500" />}
+            </div>
+            {expandedSections.ownership_history && (
+              <div className="p-4 sm:p-5">
+                {ownership_history && ownership_history.length > 0 ? (
+                  <div className="space-y-3">
+                    {ownership_history.map((record, index) => (
+                      <div key={index} className="border-l-4 border-sky-300 pl-3 py-1.5">
+                        <div className="flex justify-between items-start mb-1">
+                          <span className="font-medium text-slate-800 text-sm">{record.change_type || 'N/A'}</span>
+                          <span className="text-xs text-slate-500">{record.change_date || 'N/A'}</span>
+                        </div>
+                        <p className="text-slate-600 text-sm">From: {record.previous_owner_type || 'N/A'} ({record.previous_owner_postcode || 'N/A'})</p>
+                        <p className="text-slate-600 text-sm">To: {record.new_owner_type || 'N/A'} ({record.new_owner_postcode || 'N/A'})</p>
+                        <div className="mt-1 text-xs text-slate-500">
+                          Mileage: {record.mileage_at_change?.toLocaleString() || 'N/A'} • Source: {record.source || 'N/A'}
+                          {record.sale_price && ` • Sale Price: ${formatCurrency(record.sale_price)}`}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="text-slate-500 text-center py-4 text-sm">No ownership history available</p>
+                )}
+              </div>
+            )}
+          </div>
+
+          <div className="bg-white rounded-xl shadow-lg border border-slate-200">
+            <div
+              className="p-4 sm:p-5 border-b border-slate-200 flex items-center justify-between cursor-pointer hover:bg-slate-50 transition-colors"
+              onClick={() => toggleSection('theft_records')}
+            >
+              <div className="flex items-center gap-3">
+                <Shield className="text-rose-600" size={20} />
+                <h3 className="text-md font-semibold text-slate-800">Theft Records</h3>
+              </div>
+              {expandedSections.theft_records ? <ChevronUp size={20} className="text-slate-500" /> : <ChevronDown size={20} className="text-slate-500" />}
+            </div>
+            {expandedSections.theft_records && (
+              <div className="p-4 sm:p-5">
+                {theft_records && theft_records.length > 0 ? (
+                  <div className="space-y-3">
+                    {theft_records.map((record, index) => (
+                      <div key={index} className="border-l-4 border-rose-300 pl-3 py-1.5">
+                        <div className="flex justify-between items-start mb-1">
+                          <span className="font-medium text-slate-800 text-sm">Theft Reported</span>
+                          <span className="text-xs text-slate-500">{record.theft_date || 'N/A'}</span>
+                        </div>
+                        <p className="text-slate-600 text-sm">Recovered: {record.recovery_date || 'Not recovered'}</p>
+                        <p className="text-slate-600 text-sm">Circumstances: {record.theft_circumstances || 'N/A'}</p>
+                        <div className="mt-1 text-xs text-slate-500">
+                          Theft Location: {record.theft_location_postcode || 'N/A'} • Recovery Location: {record.recovery_location_postcode || 'N/A'}
+                          <br />
+                          Condition: {record.recovery_condition || 'N/A'} • Status: {record.current_status || 'N/A'}
+                          <br />
+                          Police Ref: {record.police_reference || 'N/A'} • Insurance Claim Ref: {record.insurance_claim_reference || 'N/A'}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="text-center py-6">
+                    <ShieldCheck className="mx-auto text-emerald-500 mb-2" size={28} />
+                    <p className="text-emerald-700 font-medium text-sm">No theft records found</p>
+                    <p className="text-slate-500 text-xs">This vehicle has no reported theft incidents.</p>
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+
+          <div className="bg-white rounded-xl shadow-lg border border-slate-200">
+            <div
+              className="p-4 sm:p-5 border-b border-slate-200 flex items-center justify-between cursor-pointer hover:bg-slate-50 transition-colors"
+              onClick={() => toggleSection('insurance_claims')}
+            >
+              <div className="flex items-center gap-3">
+                <Shield className="text-amber-600" size={20} />
+                <h3 className="text-md font-semibold text-slate-800">Insurance Claims</h3>
+              </div>
+              {expandedSections.insurance_claims ? <ChevronUp size={20} className="text-slate-500" /> : <ChevronDown size={20} className="text-slate-500" />}
+            </div>
+            {expandedSections.insurance_claims && (
+              <div className="p-4 sm:p-5">
+                {insurance_claims && insurance_claims.length > 0 ? (
+                  <div className="space-y-3">
+                    {insurance_claims.map((claim, index) => (
+                      <div key={index} className="border-l-4 border-amber-300 pl-3 py-1.5">
+                        <div className="flex justify-between items-start mb-1">
+                          <span className="font-medium text-slate-800 text-sm">{claim.claim_type || 'N/A'}</span>
+                          <span className="text-xs text-slate-500">{claim.claim_date || 'N/A'}</span>
+                        </div>
+                        <p className="text-slate-600 text-sm">{claim.description || 'No description.'}</p>
+                        <div className="mt-1 text-xs text-slate-500">
+                          Claim Amount: {formatCurrency(claim.claim_amount)} • Settlement: {formatCurrency(claim.settlement_amount)}
+                          <br />
+                          Mileage: {claim.mileage_at_incident?.toLocaleString() || 'N/A'} • Location: {claim.incident_location_postcode || 'N/A'}
+                          <br />
+                          Fault: {claim.fault_claim ? 'Yes' : 'No'} • Total Loss: {claim.total_loss ? 'Yes' : 'No'} • Insurer: {claim.insurer || 'N/A'}
+                          <br />
+                          Reference: {claim.claim_reference || 'N/A'}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="text-center py-6">
+                    <ShieldCheck className="mx-auto text-emerald-500 mb-2" size={28} />
+                    <p className="text-emerald-700 font-medium text-sm">No insurance claims found</p>
+                    <p className="text-slate-500 text-xs">This vehicle has no reported insurance claims.</p>
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+
+          <div className="bg-white rounded-xl shadow-lg border border-slate-200">
+            <div
+              className="p-4 sm:p-5 border-b border-slate-200 flex items-center justify-between cursor-pointer hover:bg-slate-50 transition-colors"
+              onClick={() => toggleSection('mileage_records')}
+            >
+              <div className="flex items-center gap-3">
+                <BarChart className="text-sky-600" size={20} />
+                <h3 className="text-md font-semibold text-slate-800">Mileage Records</h3>
+              </div>
+              {expandedSections.mileage_records ? <ChevronUp size={20} className="text-slate-500" /> : <ChevronDown size={20} className="text-slate-500" />}
+            </div>
+            {expandedSections.mileage_records && (
+              <div className="p-4 sm:p-5">
+                {mileage_records && mileage_records.length > 0 ? (
+                  <div className="space-y-3">
+                    {mileage_records.map((record, index) => (
+                      <div key={index} className="border-l-4 border-sky-300 pl-3 py-1.5">
+                        <div className="flex justify-between items-start mb-1">
+                          <span className="font-medium text-slate-800 text-sm">{record.reading_date || 'N/A'}</span>
+                          <span className={`text-xs font-medium ${record.discrepancy_flag ? 'text-rose-600' : 'text-emerald-600'}`}>
+                            {record.discrepancy_flag ? 'Discrepancy' : 'Verified'}
+                          </span>
+                        </div>
+                        <p className="text-slate-600 text-sm">Mileage: {record.mileage?.toLocaleString() || 'N/A'}</p>
+                        <div className="mt-1 text-xs text-slate-500">
+                          Source: {record.source || 'N/A'} • Previous: {record.previous_mileage?.toLocaleString() || 'N/A'}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="text-slate-500 text-center py-4 text-sm">No mileage records available</p>
+                )}
+              </div>
+            )}
+          </div>
+
+          <div className="bg-white rounded-xl shadow-lg border border-slate-200">
+            <div
+              className="p-4 sm:p-5 border-b border-slate-200 flex items-center justify-between cursor-pointer hover:bg-slate-50 transition-colors"
+              onClick={() => toggleSection('finance_records')}
+            >
+              <div className="flex items-center gap-3">
+                <CreditCard className="text-amber-600" size={20} />
+                <h3 className="text-md font-semibold text-slate-800">Finance Records</h3>
+              </div>
+              {expandedSections.finance_records ? <ChevronUp size={20} className="text-slate-500" /> : <ChevronDown size={20} className="text-slate-500" />}
+            </div>
+            {expandedSections.finance_records && (
+              <div className="p-4 sm:p-5">
+                {finance_records && finance_records.length > 0 ? (
+                  <div className="space-y-3">
+                    {finance_records.map((record, index) => (
+                      <div key={index} className="border-l-4 border-amber-300 pl-3 py-1.5">
+                        <div className="flex justify-between items-start mb-1">
+                          <span className="font-medium text-slate-800 text-sm">{record.finance_type || 'N/A'}</span>
+                          <span className="text-xs text-slate-500">{record.finance_start_date || 'N/A'}</span>
+                        </div>
+                        <p className="text-slate-600 text-sm">Company: {record.finance_company || 'N/A'}</p>
+                        <div className="mt-1 text-xs text-slate-500">
+                          Start: {record.finance_start_date || 'N/A'} • End: {record.finance_end_date || 'N/A'}
+                          <br />
+                          Monthly Payment: {formatCurrency(record.monthly_payment)} • Settlement: {formatCurrency(record.settlement_figure)}
+                          <br />
+                          Outstanding: {record.outstanding_finance ? 'Yes' : 'No'} • Settlement Date: {record.settlement_date || 'N/A'}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="text-center py-6">
+                    <ShieldCheck className="mx-auto text-emerald-500 mb-2" size={28} />
+                    <p className="text-emerald-700 font-medium text-sm">No finance records found</p>
+                    <p className="text-slate-500 text-xs">This vehicle has no reported finance agreements.</p>
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+
+          <div className="bg-white rounded-xl shadow-lg border border-slate-200">
+            <div
+              className="p-4 sm:p-5 border-b border-slate-200 flex items-center justify-between cursor-pointer hover:bg-slate-50 transition-colors"
+              onClick={() => toggleSection('auction_records')}
+            >
+              <div className="flex items-center gap-3">
+                <Gavel className="text-sky-600" size={20} />
+                <h3 className="text-md font-semibold text-slate-800">Auction Records</h3>
+              </div>
+              {expandedSections.auction_records ? <ChevronUp size={20} className="text-slate-500" /> : <ChevronDown size={20} className="text-slate-500" />}
+            </div>
+            {expandedSections.auction_records && (
+              <div className="p-4 sm:p-5">
+                {auction_records && auction_records.length > 0 ? (
+                  <div className="space-y-3">
+                    {auction_records.map((record, index) => (
+                      <div key={index} className="border-l-4 border-sky-300 pl-3 py-1.5">
+                        <div className="flex justify-between items-start mb-1">
+                          <span className="font-medium text-slate-800 text-sm">{record.auction_house || 'N/A'}</span>
+                          <span className="text-xs text-slate-500">{record.auction_date || 'N/A'}</span>
+                        </div>
+                        <p className="text-slate-600 text-sm">Lot: {record.lot_number || 'N/A'} • Condition: {record.condition_grade || 'N/A'}</p>
+                        <div className="mt-1 text-xs text-slate-500">
+                          Hammer Price: {formatCurrency(record.hammer_price)} • Guide: {formatCurrency(record.guide_price_low)} - {formatCurrency(record.guide_price_high)}
+                          <br />
+                          Mileage: {record.mileage_at_auction?.toLocaleString() || 'N/A'} • Seller: {record.seller_type || 'N/A'}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="text-slate-500 text-center py-4 text-sm">No auction records available</p>
                 )}
               </div>
             )}
@@ -583,12 +861,10 @@ const App = () => {
     );
   };
 
-  // Main App return
   return (
     <div className="min-h-screen bg-slate-100">
       <Navbar healthStatus={healthStatus} />
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8">
-        
         <div id="search-section-top" className="grid md:grid-cols-12 gap-8 items-center mb-8 md:mb-12">
           <div className="md:col-span-5 lg:col-span-6">
             <h1 className="text-3xl sm:text-4xl font-bold text-slate-800 mb-3">Vehicle Insights</h1>
@@ -596,7 +872,6 @@ const App = () => {
               Access detailed vehicle data and AI-driven analysis using VIN or VRM.
             </p>
           </div>
-
           <div className="md:col-span-7 lg:col-span-6">
             <div className="bg-white rounded-xl shadow-xl border border-slate-200 p-6 sm:p-8">
               <form onSubmit={handleSearch} className="space-y-5">
@@ -620,7 +895,6 @@ const App = () => {
                     </label>
                   </div>
                 </div>
-
                 <div className="relative">
                   <input
                     type="text"
@@ -634,7 +908,6 @@ const App = () => {
                     <Search className="text-slate-400" size={20} />
                   </div>
                 </div>
-
                 <button
                   type="submit"
                   disabled={loading || !searchQuery.trim()}
@@ -652,9 +925,8 @@ const App = () => {
             </div>
           </div>
         </div>
-
         <div id="results-area" className="mt-6 sm:mt-8">
-          {loading && !selectedVehicle && ( 
+          {loading && !selectedVehicle && (
             <div className="flex flex-col justify-center items-center py-10">
               <RefreshCw className="animate-spin text-sky-600" size={40} />
               <p className="mt-4 text-lg text-slate-700">Loading vehicle data...</p>
@@ -675,15 +947,15 @@ const App = () => {
             renderVehicleDetails(selectedVehicle)
           )}
           {!loading && !error && !selectedVehicle && (
-             <div className="text-center text-slate-500 py-10">
-                <Car size={56} className="mx-auto mb-4 text-slate-400" />
-                <p className="text-md">Enter a VIN or VRM to begin your search.</p>
-                <p className="text-xs mt-2">Example VIN: SAMPLETESTVINURFY, Example VRM: AB05IYG</p>
-             </div>
+            <div className="text-center text-slate-500 py-10">
+              <Car size={56} className="mx-auto mb-4 text-slate-400" />
+              <p className="text-md">Enter a VIN or VRM to begin your search.</p>
+              <p className="text-xs mt-2">Example VIN: SAMPLETESTVINURFY, Example VRM: AB05IYG</p>
+            </div>
           )}
         </div>
       </div>
-       <footer className="text-center py-6 border-t border-slate-200 mt-12">
+      <footer className="text-center py-6 border-t border-slate-200 mt-12">
         <p className="text-sm text-slate-500">© {new Date().getFullYear()} VehicleIntel. All rights reserved.</p>
       </footer>
     </div>
