@@ -6,12 +6,10 @@ import sys
 from contextlib import asynccontextmanager
 from datetime import datetime, timezone 
 
-# Import your modules
 from utils.database import init_database
 from api.routes import router as api_router 
 from utils.llms import model
 
-# Configure logging
 logging.basicConfig(
     level=logging.INFO,
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
@@ -23,7 +21,7 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 def get_utc_timestamp() -> str:
-    return datetime.now(timezone.utc).isoformat()
+    return datetime.now(timezone.utc).isoformat().replace("+00:00", "Z")
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -36,7 +34,8 @@ async def lifespan(app: FastAPI):
         if model is None: 
             logger.warning("⚠️  Azure OpenAI model not initialized - AI features may not work")
         else:
-            logger.info("✅ Azure OpenAI model validated successfully (basic check)")
+            # Basic check if model object exists. More robust checks could be added.
+            logger.info(f"✅ Azure OpenAI model object found: {type(model)}")
     except Exception as e:
         logger.error(f"❌ LLM configuration error: {e}")
         
@@ -47,10 +46,10 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(
     title="Vehicle Insights API",
-    description="""...""", 
-    version="1.0.0",
+    description="Comprehensive vehicle data and AI-powered insights platform. Access detailed history, valuations, technical specifications, recalls, ownership changes, theft records, insurance claims, finance, and auction data for vehicles, all enhanced with AI-generated summaries and advice.",
+    version="1.1.0",
     contact={
-        "name": "Vehicle Insights API",
+        "name": "Vehicle Insights API Support",
         "email": "support@vehicleinsights.com",
     },
     license_info={
@@ -64,10 +63,11 @@ app.add_middleware(
     CORSMiddleware,
     allow_origins=[
         "http://localhost:3000",  
-        "http://localhost:5173",  
+        "http://localhost:5173",
+        "*" # Consider restricting in production
     ],
     allow_credentials=True,
-    allow_methods=["GET", "POST", "PUT", "DELETE"],
+    allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
     allow_headers=["*"],
 )
 
@@ -77,7 +77,7 @@ async def global_exception_handler(request, exc):
     return JSONResponse(
         status_code=500,
         content={
-            "detail": "An unexpected error occurred",
+            "detail": "An unexpected error occurred on the server.",
             "error_code": "INTERNAL_SERVER_ERROR",
             "timestamp": get_utc_timestamp() 
         }
@@ -100,36 +100,41 @@ app.include_router(api_router)
 async def root():
     return {
         "message": "Welcome to Vehicle Insights API",
-        "version": "1.0.0",
-        "description": "AI-powered vehicle information and insights platform",
+        "version": "1.1.0",
+        "description": "AI-powered vehicle information and insights platform with extended data capabilities.",
         "documentation": "/docs",
         "health_check": "/api/v1/health", 
         "timestamp": get_utc_timestamp(),
         "endpoints": {
             "search_by_vin": "/api/v1/vehicle/vin/{vin}",
             "search_by_vrm": "/api/v1/vehicle/vrm/{vrm}",
-            "general_search": "/api/v1/vehicle/search?q={query}"
+            "general_search": "/api/v1/vehicle/search?q={query}",
+            "refresh_insights": "/api/v1/vehicle/{vehicle_id}/refresh-insights"
         }
     }
 
 @app.get("/version", tags=["utility"])
 async def get_version_info(): 
-    """Get API version information"""
     return {
-        "api_version": "1.0.0", 
+        "api_version": "1.1.0", 
         "build_date": get_utc_timestamp(), 
         "python_version": sys.version,
         "features": [
             "VIN lookup",
             "VRM lookup", 
             "AI insights generation",
-            "Vehicle history analysis",
+            "Vehicle history analysis (MOT, Service)",
             "Recall information",
             "Valuation data",
-            "Technical specifications"
+            "Technical specifications",
+            "Ownership history",
+            "Theft records",
+            "Insurance claims",
+            "Mileage records",
+            "Finance records",
+            "Auction records"
         ]
     }
-
 
 if __name__ == "__main__":
     import uvicorn
@@ -137,5 +142,6 @@ if __name__ == "__main__":
         "main:app", 
         host="0.0.0.0",
         port=8000,
-        log_level="info"
+        log_level="info",
+        reload=True # Useful for development
     )

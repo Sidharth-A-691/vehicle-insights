@@ -8,17 +8,14 @@ from datetime import datetime, date, timezone
 import logging
 
 from utils.llms import model 
+from models import OwnershipChangeType, VehicleStatusType, InsuranceClaimType
+
 
 logger = logging.getLogger(__name__)
 
 class VehicleInsightsOutputParser(StrOutputParser): 
-    """Custom output parser for structured vehicle insights.
-    If LLM returns a parsable JSON string, it loads it. Otherwise, provides a fallback structure.
-    """
-    
     def parse(self, text: str) -> Dict[str, Any]:
         try:
-            
             clean_text = text.strip()
             if clean_text.startswith("```json"):
                 clean_text = clean_text[7:]
@@ -42,15 +39,12 @@ class VehicleInsightsOutputParser(StrOutputParser):
             }
 
 class VehicleAIService:
-    """Service for generating AI-powered vehicle insights and summaries using Langchain Expression Language."""
-    
     def __init__(self):
         self.model = model 
         self.output_parser = VehicleInsightsOutputParser()
         self._setup_chain() 
     
     def _setup_chain(self):
-        
         prompt_template_str = """
 You are an expert automotive consultant analyzing THIS SPECIFIC VEHICLE'S actual history and data. 
 Your job is to tell the owner what has actually happened to THEIR car and what it means for them.
@@ -63,7 +57,7 @@ VEHICLE INFORMATION:
 VALUATION DATA:
 {valuation_data}
 
-VEHICLE HISTORY:
+VEHICLE HISTORY (MOT, Service, etc.):
 {history_data}
 
 RECALL INFORMATION:
@@ -72,37 +66,60 @@ RECALL INFORMATION:
 TECHNICAL SPECIFICATIONS:
 {specification_data}
 
+OWNERSHIP HISTORY:
+{ownership_history_data}
+
+THEFT RECORDS:
+{theft_data}
+
+INSURANCE CLAIMS:
+{insurance_data}
+
+MILEAGE RECORDS (often corroborates MOT/Service):
+{mileage_history_data}
+
+FINANCE RECORDS:
+{finance_data}
+
+AUCTION RECORDS:
+{auction_data}
+
 CRITICAL INSTRUCTIONS:
-- Base your analysis on the ACTUAL data provided, not generic knowledge about this car model
-- Reference specific dates, mileage readings, recall numbers, and actual events that happened to this vehicle
-- If there are MOT records, mention what actually happened (pass/fail/advisories) and when
-- If there are recalls, explain what was actually done and when, and what's still outstanding
-- If there are valuation records, reference the actual values and how they've changed
-- Use specific mileage figures, dates, and events from the history
-- Make connections between different data points (e.g., how mileage relates to value changes)
+- Base your analysis on the ACTUAL data provided, not generic knowledge about this car model.
+- Reference specific dates, mileage readings, recall numbers, actual events, financial details, theft statuses, and ownership changes.
+- If there are MOT records, mention what actually happened (pass/fail/advisories) and when.
+- If there are recalls, explain what was actually done and when, and what's still outstanding.
+- If there are valuation records, reference the actual values and how they've changed.
+- If there is ownership history, comment on the number of owners and types of ownership changes.
+- If there are theft records, clearly state the status (e.g., stolen, recovered).
+- If there are insurance claims, note the type, fault, and if it was a total loss.
+- If there are finance records, indicate if finance is outstanding and the type.
+- If there are auction records, mention if sold and the price relative to guide.
+- Use specific mileage figures, dates, and events from all provided history sections.
+- Make connections between different data points (e.g., how mileage relates to value changes, how an insurance claim might relate to an MOT advisory).
 
 Provide your analysis *strictly* in the following JSON format. Do not add any text before or after the JSON object.
 
 {{
-    "summary": "A detailed analysis of THIS SPECIFIC VEHICLE based on its actual history, focusing on what has actually happened to it. Reference specific events, dates, mileage, and recalls from the data. Make it conversational but data-driven in 2-3 paragraphs",
+    "summary": "A detailed analysis of THIS SPECIFIC VEHICLE based on its actual history, focusing on what has actually happened to it. Reference specific events, dates, mileage, recalls, ownership changes, finance status, theft incidents, and insurance claims from the data. Make it conversational but data-driven in 2-3 paragraphs. Highlight any major events like theft, total loss claims, or outstanding finance.",
     "key_insights": [
-        "List 4-5 key insights about what this SPECIFIC vehicle has been through. Reference actual dates, mileage, MOT results, recall completions, service history, etc. and focus on practical aspects like reliability, maintenance, costs, performance.Each insight should be based on the actual data provided."
+        "List 4-5 key insights about what this SPECIFIC vehicle has been through. Reference actual dates, mileage, MOT results, recall completions, service history, ownership changes, theft incidents (with status), insurance claims (total loss, fault), finance status (outstanding, type), auction results. Focus on practical aspects like reliability, maintenance, costs, performance, security, and financial encumbrances. Each insight should be based on the actual data provided."
     ],
-    "owner_advice": "Specific advice based on what this car has actually experienced - reference the actual MOT history, completed/outstanding recalls, mileage patterns, service records, etc.",
+    "owner_advice": "Specific advice based on what this car has actually experienced - reference the actual MOT history, completed/outstanding recalls, mileage patterns, service records, ownership history, finance (e.g. if outstanding, or coming to an end), theft history (e.g. security advice if stolen previously), insurance claim history (e.g. potential impact on future insurance).",
     "reliability_assessment": {{
-        "score": "Rate 1-10 based on the ACTUAL history of this specific vehicle (MOT passes/fails, recalls completed, advisory notes, etc.)",
-        "explanation": "Explain the score based on the actual events in this car's history."
+        "score": "Rate 1-10 based on the ACTUAL history of this specific vehicle (MOT passes/fails, recalls completed, advisory notes, insurance claim patterns for non-cosmetic issues etc.).",
+        "explanation": "Explain the score based on the actual events in this car's history, including MOTs, recalls, and frequent non-cosmetic insurance claims."
     }},
     "value_assessment": {{
-        "current_market_position": "Based on the ACTUAL valuation data provided, how has this car's value changed over time? Reference specific figures and dates.",
-        "factors_affecting_value": "What factors from this car's ACTUAL history affect its value (mileage increases, condition grades, MOT history, recall status, etc.)."
+        "current_market_position": "Based on the ACTUAL valuation data provided, how has this car's value changed over time? Reference specific figures and dates. Consider impact of finance status, theft history, total loss claims, and auction results if available.",
+        "factors_affecting_value": "What factors from this car's ACTUAL history affect its value (mileage increases, condition grades, MOT history, recall status, ownership changes, finance outstanding, theft history, insurance total loss claims, auction sales data, etc.)."
     }},
     "attention_items": [
-        "List specific items based on the actual data: exact MOT due dates, outstanding recall numbers with descriptions, specific advisory notes from MOT history, etc. Be precise with dates, recall numbers, and descriptions."
+        "List specific items based on the actual data: exact MOT due dates, outstanding recall numbers with descriptions, specific advisory notes from MOT history, details of any outstanding finance (type, company), active theft status, upcoming finance agreement end dates. Be precise with dates, recall numbers, and descriptions."
     ],
     "cost_insights": {{
-        "typical_maintenance": "Based on this car's actual service history and MOT records, what maintenance patterns are evident?",
-        "insurance_notes": "Reference the actual insurance group from the data and any implications based on the car's specific features and history.",
+        "typical_maintenance": "Based on this car's actual service history and MOT records, what maintenance patterns are evident? Mention any finance payments if data is available.",
+        "insurance_notes": "Reference the actual insurance group from the data. Comment on potential implications based on the car's specific features, history, theft records, and past claims.",
         "fuel_efficiency": "Use the actual CO2 emissions and fuel consumption figures from the data, not generic estimates."
     }},
     "technical_highlights": [
@@ -111,37 +128,25 @@ Provide your analysis *strictly* in the following JSON format. Do not add any te
 }}
 
 EXAMPLES OF GOOD DATA-SPECIFIC INSIGHTS:
-- "Your car passed its MOT on [actual date] at [actual mileage] with only minor advisories about [specific advisory notes]"
-- "The recall [actual recall number] for [actual issue] was completed on [actual date], improving your car's safety"
-- "Your car's value dropped from £[actual figure] to £[actual figure] between [dates], likely due to the mileage increase from [X] to [Y] miles"
-- "Your next MOT is due on [actual date from data] - mark your calendar"
-- "Outstanding recall [number]: [actual description] - you should contact your dealer about this"
+- "Your car passed its MOT on [actual date] at [actual mileage] with only minor advisories about [specific advisory notes]."
+- "The recall [actual recall number] for [actual issue] was completed on [actual date]."
+- "This vehicle has outstanding finance with [Finance Company] of type [Finance Type], which started on [Date]."
+- "A theft was reported on [Date]; the vehicle status is currently [Stolen/Recovered]."
+- "An insurance claim for [Claim Type] was made on [Date], noted as [Fault/Non-Fault] and [was/was not] a total loss."
+- "The vehicle was sold at auction on [Date] for £[Hammer Price] by [Auction House]."
+- "There have been [Number] previous owners; the last change was from [Previous Owner Type] to [New Owner Type] on [Date]."
 
 AVOID GENERIC STATEMENTS LIKE:
-- "Peugeot 508s are generally reliable" (talk about THIS car's reliability based on its history)
-- "Sports cars typically have higher insurance" (use the actual insurance group)
-- "Convertibles need special care" (focus on what this specific convertible has experienced)
+- "Peugeot 508s are generally reliable" (talk about THIS car's reliability based on its history).
+- "Sports cars typically have higher insurance" (use the actual insurance group and claim history).
 """
         self.prompt = ChatPromptTemplate.from_template(prompt_template_str)
-        
         self.chain = self.prompt | self.model | self.output_parser
     
     def generate_vehicle_insights(self, vehicle_data_dict: Dict[str, Any]) -> Dict[str, Any]:
-        """
-        Generate comprehensive AI insights for a vehicle.
-        
-        Args:
-            vehicle_data_dict: Complete vehicle data including all related information,
-                               as structured by VehicleService._vehicle_to_dict.
-                               
-        Returns:
-            Dictionary containing AI-generated insights.
-        """
         try:
             formatted_prompt_inputs = self._format_data_for_prompt(vehicle_data_dict)
-            
             logger.info(f"Generating insights for vehicle: {vehicle_data_dict.get('basic', {}).get('vrm', 'Unknown VIN/VRM')}")
-            
             ai_response_dict = self.chain.invoke(formatted_prompt_inputs)
             
             ai_response_dict['generated_at'] = datetime.now(timezone.utc).isoformat()
@@ -155,11 +160,6 @@ AVOID GENERIC STATEMENTS LIKE:
             return self._get_fallback_insights(vehicle_data_dict) 
     
     def _format_data_for_prompt(self, vehicle_data_from_service: Dict[str, Any]) -> Dict[str, str]:
-        """
-        Format vehicle data (received from VehicleService._vehicle_to_dict) for the prompt template.
-        The keys in the returned dictionary must match the input_variables of the prompt.
-        Enhanced to provide more structured, detailed formatting for better AI analysis.
-        """
         
         def format_section(data_item: Optional[Any], title: str) -> str:
             if data_item is None or (isinstance(data_item, list) and not data_item):
@@ -178,24 +178,51 @@ AVOID GENERIC STATEMENTS LIKE:
             elif isinstance(data_item, dict): 
                 return f"{title}:\n{self._dict_to_readable_string(data_item)}"
             else:
-                return f"{title}: Data in unexpected format"
+                return f"{title}: Data in unexpected format ({type(data_item)})"
 
-        # Enhanced formatting with more context
         basic_info = vehicle_data_from_service.get('basic', {})
         history_records = vehicle_data_from_service.get('history', [])
         recall_records = vehicle_data_from_service.get('recalls', [])
         valuation_records = vehicle_data_from_service.get('valuations', [])
-        
-        # Add summary counts and key dates for context
+        ownership_records = vehicle_data_from_service.get('ownership_history', [])
+        theft_records = vehicle_data_from_service.get('theft_records', [])
+        insurance_records = vehicle_data_from_service.get('insurance_claims', [])
+        mileage_records = vehicle_data_from_service.get('mileage_records', [])
+        finance_records = vehicle_data_from_service.get('finance_records', [])
+        auction_records = vehicle_data_from_service.get('auction_records', [])
+
+        latest_mileage_record = max(mileage_records, key=lambda x: x.get('reading_date', date.min), default={})
+        latest_mot_mileage = max([h.get('mileage', 0) for h in history_records if h.get('event_type', '').lower() == 'mot'], default=0)
+        current_mileage = latest_mileage_record.get('mileage', latest_mot_mileage) or 'Unknown'
+
+        outstanding_finance_info = "No"
+        if finance_records:
+            outstanding = [f for f in finance_records if f.get('outstanding_finance')]
+            if outstanding:
+                outstanding_finance_info = f"Yes, {len(outstanding)} record(s) indicate outstanding finance. Last type: {outstanding[-1].get('finance_type', 'N/A')} with {outstanding[-1].get('finance_company', 'N/A')}"
+
+        theft_status_info = "No theft records"
+        if theft_records:
+            latest_theft = theft_records[-1] # Assuming sorted by date
+            theft_status_info = f"Theft reported on {latest_theft.get('theft_date')}, current status: {latest_theft.get('current_status', 'Unknown')}"
+            if latest_theft.get('recovery_date'):
+                theft_status_info += f", recovered on {latest_theft.get('recovery_date')}"
+
+
         context_summary = f"""
 VEHICLE CONTEXT SUMMARY:
 - Vehicle: {basic_info.get('year', 'Unknown')} {basic_info.get('make', 'Unknown')} {basic_info.get('model', 'Unknown')}
-- Current Mileage: {max([h.get('mileage', 0) for h in history_records], default='Unknown')} miles
+- Current Mileage: {current_mileage} miles
 - MOT Status: {basic_info.get('mot_status', 'Unknown')} (Expires: {basic_info.get('mot_expiry_date', 'Unknown')})
 - Tax Status: {basic_info.get('tax_status', 'Unknown')} (Due: {basic_info.get('tax_due_date', 'Unknown')})
-- Total History Records: {len(history_records)}
+- Total History Records (MOT/Service): {len(history_records)}
 - Total Recalls: {len(recall_records)} ({len([r for r in recall_records if r.get('recall_status') == 'Completed'])} completed)
 - Valuation Records: {len(valuation_records)}
+- Ownership Changes: {len(ownership_records)}
+- Theft Incidents: {len(theft_records)} ({theft_status_info})
+- Insurance Claims: {len(insurance_records)}
+- Finance Records: {len(finance_records)} (Outstanding Finance: {outstanding_finance_info})
+- Auction Records: {len(auction_records)}
         """
 
         return {
@@ -203,24 +230,34 @@ VEHICLE CONTEXT SUMMARY:
             "valuation_data": format_section(valuation_records, "Valuation History"),
             "history_data": format_section(history_records, "Vehicle History & MOT Records"),
             "recall_data": format_section(recall_records, "Recall Information"),
-            "specification_data": format_section(vehicle_data_from_service.get('specifications'), "Technical Specifications")
+            "specification_data": format_section(vehicle_data_from_service.get('specifications'), "Technical Specifications"),
+            "ownership_history_data": format_section(ownership_records, "Ownership History"),
+            "theft_data": format_section(theft_records, "Theft Records"),
+            "insurance_data": format_section(insurance_records, "Insurance Claims"),
+            "mileage_history_data": format_section(mileage_records, "Mileage History"),
+            "finance_data": format_section(finance_records, "Finance Records"),
+            "auction_data": format_section(auction_records, "Auction Records")
         }
     
     def _dict_to_readable_string(self, data_dict: Dict[str, Any]) -> str:
-        """Convert a single dictionary item to a human-readable string for the prompt.
-        Enhanced to highlight important fields and provide better context.
-        """
         if not data_dict:
             return "No information available for this item."
         
-        # Prioritize important fields for different record types
         priority_fields = {
-            'event_date', 'recall_date', 'valuation_date', 'event_type', 'recall_title', 
-            'pass_fail', 'recall_status', 'mileage', 'retail_value', 'safety_issue',
-            'completion_date', 'advisory_notes', 'recall_description', 'condition_grade'
+            'event_date', 'recall_date', 'valuation_date', 'change_date', 'theft_date', 'claim_date', 'reading_date', 'finance_start_date', 'auction_date',
+            'event_type', 'recall_title', 'change_type', 'current_status', 'claim_type', 'finance_type', 'sold',
+            'pass_fail', 'recall_status', 'outstanding_finance', 'total_loss',
+            'mileage', 'mileage_at_change', 'mileage_at_incident', 'mileage_at_valuation', 'mileage_at_auction',
+            'retail_value', 'hammer_price', 'claim_amount', 'settlement_amount', 'sale_price',
+            'safety_issue', 'fault_claim', 'discrepancy_flag',
+            'completion_date', 'recovery_date', 'settlement_date', 'finance_end_date',
+            'advisory_notes', 'recall_description', 'theft_circumstances', 'description',
+            'condition_grade', 'recovery_condition',
+            'previous_owner_type', 'new_owner_type', 'seller_type',
+            'finance_company', 'insurer', 'auction_house',
+            'source'
         }
         
-        # Group fields by importance
         important_parts = []
         other_parts = []
         
@@ -230,6 +267,8 @@ VEHICLE CONTEXT SUMMARY:
                 
                 if isinstance(value, (date, datetime)):
                     value_str = value.strftime('%Y-%m-%d')
+                elif isinstance(value, (OwnershipChangeType, VehicleStatusType, InsuranceClaimType)):
+                    value_str = value.value
                 else:
                     value_str = str(value) 
                 
@@ -240,12 +279,10 @@ VEHICLE CONTEXT SUMMARY:
                 else:
                     other_parts.append(field_info)
         
-        # Combine with important fields first
         all_parts = important_parts + other_parts
         return " | ".join(all_parts) if all_parts else "Item details not available."
     
     def _get_fallback_insights(self, vehicle_data_dict: Dict[str, Any]) -> Dict[str, Any]:
-        """Provide fallback insights when AI generation fails or encounters an error."""
         basic_info = vehicle_data_dict.get('basic', {}) 
         
         return {
@@ -256,16 +293,16 @@ VEHICLE CONTEXT SUMMARY:
                 "Detailed AI-powered analysis is temporarily unavailable.",
                 "Please refer to the 'detailed_data' section for raw vehicle information."
             ],
-            "owner_advice": "Consult the detailed vehicle data sections for specific information regarding your vehicle. For AI insights, please try again later.",
+            "owner_advice": "Consult the detailed vehicle data sections for specific information regarding your vehicle including ownership, finance, theft, and insurance. For AI insights, please try again later.",
             "reliability_assessment": {
                 "score": "N/A",
                 "explanation": "AI reliability assessment is currently unavailable."
             },
             "value_assessment": {
                 "current_market_position": "AI value assessment is currently unavailable. See 'detailed_data' for any valuation records.",
-                "factors_affecting_value": "Standard factors like age, mileage, condition, and service history typically affect value."
+                "factors_affecting_value": "Standard factors like age, mileage, condition, service history, ownership, finance, theft and claims typically affect value."
             },
-            "attention_items": ["Check 'detailed_data' for MOT/Tax due dates and any recall information."],
+            "attention_items": ["Check 'detailed_data' for MOT/Tax due dates and any recall, finance, or theft information."],
             "cost_insights": {
                 "typical_maintenance": "AI cost insights are unavailable. Refer to service history in 'detailed_data'.",
                 "insurance_notes": f"Insurance group: {basic_info.get('insurance_group', 'N/A')}. Check 'detailed_data'.",
@@ -282,35 +319,54 @@ VEHICLE CONTEXT SUMMARY:
         }
     
     def calculate_data_hash(self, vehicle_data_dict: Dict[str, Any]) -> str:
-        """
-        Calculate a SHA256 hash of key parts of the vehicle data to detect changes.
-        The input vehicle_data_dict is expected to be the output from VehicleService._vehicle_to_dict.
-        """
+        basic_info = vehicle_data_dict.get('basic', {})
+        history_records = vehicle_data_dict.get('history', [])
+        mileage_records = vehicle_data_dict.get('mileage_records', [])
+        finance_records = vehicle_data_dict.get('finance_records', [])
+        theft_records = vehicle_data_dict.get('theft_records', [])
+        insurance_claims = vehicle_data_dict.get('insurance_claims', [])
+        auction_records = vehicle_data_dict.get('auction_records', [])
+        ownership_history = vehicle_data_dict.get('ownership_history', [])
+        
+        latest_mileage = None
+        if mileage_records:
+            latest_mileage_record = max(mileage_records, key=lambda x: x.get('reading_date', date.min), default={})
+            latest_mileage = latest_mileage_record.get('mileage')
+        elif history_records:
+            latest_history_mileage = max([h.get('mileage') for h in history_records if h.get('mileage') is not None], default=None)
+            latest_mileage = latest_history_mileage
+
         hash_input = {
             'basic': {
-                'vin': vehicle_data_dict.get('basic', {}).get('vin'),
-                'vrm': vehicle_data_dict.get('basic', {}).get('vrm'),
-                'year': vehicle_data_dict.get('basic', {}).get('year'),
-                'mileage': vehicle_data_dict.get('history', [{}])[-1].get('mileage') if vehicle_data_dict.get('history') else None, 
-                'mot_status': vehicle_data_dict.get('basic', {}).get('mot_status'),
-                'mot_expiry_date': str(vehicle_data_dict.get('basic', {}).get('mot_expiry_date')),
+                'vin': basic_info.get('vin'),
+                'vrm': basic_info.get('vrm'),
+                'year': basic_info.get('year'),
+                'mileage': latest_mileage, 
+                'mot_status': basic_info.get('mot_status'),
+                'mot_expiry_date': str(basic_info.get('mot_expiry_date')),
+                'vehicle_status': basic_info.get('vehicle_status'),
             },
-            'history_count': len(vehicle_data_dict.get('history', [])),
+            'history_count': len(history_records),
             'valuations_count': len(vehicle_data_dict.get('valuations', [])),
             'recalls_count': len(vehicle_data_dict.get('recalls', [])),
             'last_recall_status': vehicle_data_dict.get('recalls', [{}])[-1].get('recall_status') if vehicle_data_dict.get('recalls') else None,
-            'db_updated_at': str(vehicle_data_dict.get('basic', {}).get('updated_at')) 
+            'ownership_changes_count': len(ownership_history),
+            'theft_records_count': len(theft_records),
+            'last_theft_status': theft_records[-1].get('current_status') if theft_records else None,
+            'insurance_claims_count': len(insurance_claims),
+            'last_claim_total_loss': insurance_claims[-1].get('total_loss') if insurance_claims else None,
+            'mileage_records_count': len(mileage_records),
+            'finance_records_count': len(finance_records),
+            'last_finance_outstanding': finance_records[-1].get('outstanding_finance') if finance_records else None,
+            'auction_records_count': len(auction_records),
+            'last_auction_sold': auction_records[-1].get('sold') if auction_records else None,
+            'db_updated_at': str(basic_info.get('updated_at')) 
         }
         
         serialized_hash_input = json.dumps(hash_input, sort_keys=True, default=str).encode('utf-8')
         return hashlib.sha256(serialized_hash_input).hexdigest()
     
     def should_regenerate_insights(self, cached_summary_model: Any, current_vehicle_data_dict: Dict[str, Any]) -> bool:
-        """
-        Determine if insights should be regenerated.
-        'cached_summary_model' is the SQLAlchemy model instance of VehicleAISummary.
-        'current_vehicle_data_dict' is the fresh data from VehicleService._vehicle_to_dict.
-        """
         if not cached_summary_model:
             logger.info("No cached summary found, regeneration needed.")
             return True
@@ -331,7 +387,7 @@ VEHICLE CONTEXT SUMMARY:
             generated_at_utc = generated_at_utc.replace(tzinfo=timezone.utc)
 
         cache_age = datetime.now(timezone.utc) - generated_at_utc
-        if cache_age.days > 30:
+        if cache_age.days > 30: # Consider reducing this if data changes frequently
             logger.info(f"Cached insights are older than 30 days ({cache_age.days} days). Regeneration needed.")
             return True
         

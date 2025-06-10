@@ -1,80 +1,239 @@
-from sqlalchemy import Column, Integer, String, Boolean, DateTime, Float, Text, ForeignKey, Date, Index
-from sqlalchemy.orm import declarative_base 
-from sqlalchemy.orm import relationship
+from sqlalchemy import Column, Integer, String, Boolean, DateTime, Float, Text, ForeignKey, Date, Index, Enum, JSON
+from sqlalchemy.orm import declarative_base, relationship
+from sqlalchemy.dialects.postgresql import UUID
 from datetime import datetime
+import enum
 
 Base = declarative_base()
 
+class OwnershipChangeType(enum.Enum):
+    PRIVATE_TO_PRIVATE = "private_to_private"
+    PRIVATE_TO_TRADE = "private_to_trade"
+    TRADE_TO_PRIVATE = "trade_to_private"
+    TRADE_TO_TRADE = "trade_to_trade"
+    LEASE_RETURN = "lease_return"
+    FLEET_DISPOSAL = "fleet_disposal"
+    AUCTION_SALE = "auction_sale"
+    INSURANCE_WRITE_OFF = "insurance_write_off"
+
+class VehicleStatusType(enum.Enum):
+    ACTIVE = "active"
+    STOLEN = "stolen"
+    RECOVERED = "recovered"
+    WRITTEN_OFF = "written_off"
+    SCRAPPED = "scrapped"
+    EXPORTED = "exported"
+    SORN = "sorn"
+    DESTROYED = "destroyed"
+
+class InsuranceClaimType(enum.Enum):
+    THEFT = "theft"
+    ACCIDENT = "accident"
+    FIRE = "fire"
+    FLOOD = "flood"
+    VANDALISM = "vandalism"
+    WINDSCREEN = "windscreen"
+    THIRD_PARTY = "third_party"
+    TOTAL_LOSS = "total_loss"
+
 class Vehicle(Base):
-    """
-    Main vehicle information table - Core vehicle details
-    """
     __tablename__ = 'vehicles'
     
-    # Primary identifiers
     id = Column(Integer, primary_key=True, autoincrement=True)
-    vin = Column(String(17), unique=True, index=True)  # Vehicle Identification Number
-    vrm = Column(String(15), unique=True, index=True)  # Vehicle Registration Mark/License Plate
+    vin = Column(String(17), unique=True, index=True)
+    vrm = Column(String(15), unique=True, index=True)
     
-    # Basic vehicle information
-    make = Column(String(50))  # e.g., Toyota, Ford, BMW
-    model = Column(String(100))  # e.g., Camry, Focus, 3 Series
-    variant = Column(String(100))  # Specific variant/trim level
-    year = Column(Integer)  # Model year
-    registration_date = Column(Date)  # First registration date
+    make = Column(String(50))
+    model = Column(String(100))
+    variant = Column(String(100))
+    year = Column(Integer)
+    registration_date = Column(Date)
     
-    # Engine & Technical Details
-    engine_size = Column(Float)  # Engine displacement in liters
-    fuel_type = Column(String(30))  # Petrol, Diesel, Electric, Hybrid, etc.
-    transmission = Column(String(30))  # Manual, Automatic, CVT, etc.
-    body_type = Column(String(30))  # Sedan, Hatchback, SUV, etc.
+    engine_size = Column(Float)
+    fuel_type = Column(String(30))
+    transmission = Column(String(30))
+    body_type = Column(String(30))
     doors = Column(Integer)  
     seats = Column(Integer)  
     
-    # Performance & Efficiency
-    engine_power_hp = Column(Integer)  # Horsepower
-    engine_power_kw = Column(Integer)  # Kilowatts
-    co2_emissions = Column(Float)  # CO2 emissions g/km
-    fuel_consumption_urban = Column(Float)  # Urban fuel consumption
-    fuel_consumption_extra_urban = Column(Float)  # Extra urban fuel consumption
-    fuel_consumption_combined = Column(Float)  # Combined fuel consumption
+    engine_power_hp = Column(Integer)
+    engine_power_kw = Column(Integer)
+    co2_emissions = Column(Float)
+    fuel_consumption_urban = Column(Float)
+    fuel_consumption_extra_urban = Column(Float)
+    fuel_consumption_combined = Column(Float)
     
-    # Legal & Status Information
-    vehicle_status = Column(String(30))  # Active, Scrapped, Exported, etc.
-    mot_status = Column(String(30))  # MOT test status
-    mot_expiry_date = Column(Date)  # MOT expiry date
-    tax_status = Column(String(30))  # Tax status
-    tax_due_date = Column(Date)  # Tax due date
+    vehicle_status = Column(String(30))
+    mot_status = Column(String(30))
+    mot_expiry_date = Column(Date)
+    tax_status = Column(String(30))
+    tax_due_date = Column(Date)
     
-    # Insurance & Classification
-    insurance_group = Column(String(10))  # Insurance group rating
-    euro_status = Column(String(30))  # Euro emissions standard
-    vehicle_class = Column(String(30))  # Classification for regulatory purposes
+    insurance_group = Column(String(10))
+    euro_status = Column(String(30))
+    vehicle_class = Column(String(30))
     
-    # Timestamps
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
     
-    # Relationships
     valuations = relationship("VehicleValuation", back_populates="vehicle")
     history_records = relationship("VehicleHistory", back_populates="vehicle")
     recalls = relationship("VehicleRecall", back_populates="vehicle")
     specifications = relationship("VehicleSpecification", back_populates="vehicle")
-    ai_summary = relationship("VehicleAISummary", back_populates="vehicle", uselist=False) # One-to-one for summary
-
-    # Example of a multi-column index
+    ai_summary = relationship("VehicleAISummary", back_populates="vehicle", uselist=False)
+    
+    ownership_changes = relationship("VehicleOwnershipHistory", back_populates="vehicle")
+    theft_records = relationship("VehicleTheftRecord", back_populates="vehicle")
+    insurance_claims = relationship("VehicleInsuranceClaim", back_populates="vehicle")
+    mileage_records = relationship("VehicleMileageRecord", back_populates="vehicle")
+    finance_records = relationship("VehicleFinanceRecord", back_populates="vehicle")
+    auction_records = relationship("VehicleAuctionRecord", back_populates="vehicle")
+    
     __table_args__ = (
         Index('ix_vehicle_make_model', 'make', 'model'),
+        Index('ix_vehicle_make_model_year', 'make', 'model', 'year'),
     )
 
+class VehicleOwnershipHistory(Base):
+    __tablename__ = 'vehicle_ownership_history'
+    
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    vehicle_id = Column(Integer, ForeignKey('vehicles.id'), index=True)
+    
+    change_date = Column(Date, nullable=False)
+    change_type = Column(Enum(OwnershipChangeType))
+    previous_owner_type = Column(String(50))
+    new_owner_type = Column(String(50))
+    previous_owner_postcode = Column(String(10))
+    new_owner_postcode = Column(String(10))
+    mileage_at_change = Column(Integer)
+    sale_price = Column(Float)
+    source = Column(String(50))
+    
+    created_at = Column(DateTime, default=datetime.utcnow)
+    
+    vehicle = relationship("Vehicle", back_populates="ownership_changes")
+
+    __table_args__ = (
+        Index('ix_ownership_vehicle_date', 'vehicle_id', 'change_date'),
+    )
+
+class VehicleTheftRecord(Base):
+    __tablename__ = 'vehicle_theft_records'
+    
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    vehicle_id = Column(Integer, ForeignKey('vehicles.id'), index=True)
+    
+    theft_date = Column(Date)
+    recovery_date = Column(Date, nullable=True)
+    theft_location_postcode = Column(String(10))
+    recovery_location_postcode = Column(String(10), nullable=True)
+    theft_circumstances = Column(Text)
+    recovery_condition = Column(String(50))
+    police_reference = Column(String(50))
+    insurance_claim_reference = Column(String(50))
+    current_status = Column(Enum(VehicleStatusType))
+    
+    created_at = Column(DateTime, default=datetime.utcnow)
+    
+    vehicle = relationship("Vehicle", back_populates="theft_records")
+
+    __table_args__ = (
+        Index('ix_theft_vehicle_date', 'vehicle_id', 'theft_date'),
+    )
+
+class VehicleInsuranceClaim(Base):
+    __tablename__ = 'vehicle_insurance_claims'
+    
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    vehicle_id = Column(Integer, ForeignKey('vehicles.id'), index=True)
+    
+    claim_date = Column(Date)
+    claim_type = Column(Enum(InsuranceClaimType))
+    claim_amount = Column(Float)
+    settlement_amount = Column(Float)
+    incident_location_postcode = Column(String(10))
+    fault_claim = Column(Boolean)
+    total_loss = Column(Boolean)
+    mileage_at_incident = Column(Integer)
+    description = Column(Text)
+    insurer = Column(String(100))
+    claim_reference = Column(String(50))
+    
+    created_at = Column(DateTime, default=datetime.utcnow)
+    
+    vehicle = relationship("Vehicle", back_populates="insurance_claims")
+
+    __table_args__ = (
+        Index('ix_insurance_vehicle_date', 'vehicle_id', 'claim_date'),
+    )
+
+class VehicleMileageRecord(Base):
+    __tablename__ = 'vehicle_mileage_records'
+    
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    vehicle_id = Column(Integer, ForeignKey('vehicles.id'), index=True)
+    
+    reading_date = Column(Date)
+    mileage = Column(Integer)
+    source = Column(String(50))
+    verified = Column(Boolean, default=False)
+    discrepancy_flag = Column(Boolean, default=False)
+    previous_mileage = Column(Integer)
+    
+    created_at = Column(DateTime, default=datetime.utcnow)
+    
+    vehicle = relationship("Vehicle", back_populates="mileage_records")
+
+    __table_args__ = (
+        Index('ix_mileage_vehicle_date', 'vehicle_id', 'reading_date'),
+    )
+
+class VehicleFinanceRecord(Base):
+    __tablename__ = 'vehicle_finance_records'
+    
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    vehicle_id = Column(Integer, ForeignKey('vehicles.id'), index=True)
+    
+    finance_start_date = Column(Date)
+    finance_end_date = Column(Date)
+    finance_type = Column(String(30))
+    finance_company = Column(String(100))
+    settlement_figure = Column(Float)
+    monthly_payment = Column(Float)
+    outstanding_finance = Column(Boolean, default=False)
+    settlement_date = Column(Date, nullable=True)
+    
+    created_at = Column(DateTime, default=datetime.utcnow)
+    
+    vehicle = relationship("Vehicle", back_populates="finance_records")
+
+class VehicleAuctionRecord(Base):
+    __tablename__ = 'vehicle_auction_records'
+    
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    vehicle_id = Column(Integer, ForeignKey('vehicles.id'), index=True)
+    
+    auction_date = Column(Date)
+    auction_house = Column(String(100))
+    lot_number = Column(String(20))
+    guide_price_low = Column(Float)
+    guide_price_high = Column(Float)
+    hammer_price = Column(Float)
+    sold = Column(Boolean)
+    seller_type = Column(String(50))
+    condition_grade = Column(String(10))
+    mileage_at_auction = Column(Integer)
+    
+    created_at = Column(DateTime, default=datetime.utcnow)
+    
+    vehicle = relationship("Vehicle", back_populates="auction_records")
+
 class VehicleValuation(Base):
-    """
-    Vehicle valuation and market data
-    """
     __tablename__ = 'vehicle_valuations'
     
     id = Column(Integer, primary_key=True, autoincrement=True)
-    vehicle_id = Column(Integer, ForeignKey('vehicles.id'), index=True) # Added index
+    vehicle_id = Column(Integer, ForeignKey('vehicles.id'), index=True)
     
     valuation_date = Column(Date)
     retail_value = Column(Float)
@@ -95,13 +254,10 @@ class VehicleValuation(Base):
     )
 
 class VehicleHistory(Base):
-    """
-    Vehicle history events and records
-    """
     __tablename__ = 'vehicle_history'
     
     id = Column(Integer, primary_key=True, autoincrement=True)
-    vehicle_id = Column(Integer, ForeignKey('vehicles.id'), index=True) 
+    vehicle_id = Column(Integer, ForeignKey('vehicles.id'), index=True)
     
     event_date = Column(Date)
     event_type = Column(String(50))
@@ -121,13 +277,10 @@ class VehicleHistory(Base):
     )
 
 class VehicleRecall(Base):
-    """
-    Vehicle recall information
-    """
     __tablename__ = 'vehicle_recalls'
     
     id = Column(Integer, primary_key=True, autoincrement=True)
-    vehicle_id = Column(Integer, ForeignKey('vehicles.id'), index=True) 
+    vehicle_id = Column(Integer, ForeignKey('vehicles.id'), index=True)
     
     recall_number = Column(String(50))
     recall_date = Column(Date)
@@ -143,13 +296,10 @@ class VehicleRecall(Base):
     vehicle = relationship("Vehicle", back_populates="recalls")
 
 class VehicleSpecification(Base):
-    """
-    Detailed technical specifications
-    """
     __tablename__ = 'vehicle_specifications'
     
     id = Column(Integer, primary_key=True, autoincrement=True)
-    vehicle_id = Column(Integer, ForeignKey('vehicles.id'), unique=True) 
+    vehicle_id = Column(Integer, ForeignKey('vehicles.id'), unique=True)
     
     length_mm = Column(Integer)
     width_mm = Column(Integer)
@@ -173,33 +323,122 @@ class VehicleSpecification(Base):
     
     vehicle = relationship("Vehicle", back_populates="specifications")
 
-
 class VehicleAISummary(Base):
-    """
-    Stores AI-generated user-friendly summaries to avoid regenerating.
-    The full AI response (which is a JSON object) is stored in 'insights_json'.
-    """
     __tablename__ = 'vehicle_ai_summaries'
     
     id = Column(Integer, primary_key=True, autoincrement=True)
-    vehicle_id = Column(Integer, ForeignKey('vehicles.id'), unique=True, index=True) # One summary per vehicle
+    vehicle_id = Column(Integer, ForeignKey('vehicles.id'), unique=True, index=True)
     
-    search_key = Column(String(20), index=True)  # VIN or VRM, for potential direct lookups
-    
-    # Stores the entire AI-generated JSON response as a string
-    insights_json = Column(Text) 
-    
-    # Simple flags for quick filtering, derived from insights_json or vehicle data
-    has_issues = Column(Boolean, default=False)  # Any MOT fails, recalls, etc.
-    needs_attention = Column(Boolean, default=False)  # Upcoming MOT, tax, etc.
-    
-    # Cache metadata
+    search_key = Column(String(20), index=True)
+    insights_json = Column(Text)
+    has_issues = Column(Boolean, default=False)
+    needs_attention = Column(Boolean, default=False)
     generated_at = Column(DateTime, default=datetime.utcnow)
-    llm_model_version = Column(String(50))  # Track which LLM version generated this
-    data_hash = Column(String(64), index=True)  # Hash of source data to detect changes
-    
+    llm_model_version = Column(String(50))
+    data_hash = Column(String(64), index=True)
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
     vehicle = relationship("Vehicle", back_populates="ai_summary")
 
+class VehicleClusterAnalytics(Base):
+    __tablename__ = 'vehicle_cluster_analytics'
+    
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    
+    make = Column(String(50), index=True)
+    model = Column(String(100), index=True)
+    year_range_start = Column(Integer)
+    year_range_end = Column(Integer)
+    body_type = Column(String(30))
+    
+    total_vehicles_analyzed = Column(Integer)
+    
+    theft_rate_percentage = Column(Float)
+    most_common_theft_location = Column(String(50))
+    avg_days_to_recovery = Column(Float)
+    theft_recovery_rate = Column(Float)
+    
+    claim_rate_percentage = Column(Float)
+    most_common_claim_type = Column(String(50))
+    avg_claim_amount = Column(Float)
+    total_loss_rate = Column(Float)
+    
+    first_mot_pass_rate = Column(Float)
+    most_common_mot_failure_reason = Column(String(100))
+    avg_mot_failure_cost = Column(Float)
+    
+    avg_ownership_duration_months = Column(Float)
+    most_common_ownership_change_type = Column(String(50))
+    fleet_vehicle_percentage = Column(Float)
+    
+    avg_depreciation_rate_per_year = Column(Float)
+    finance_percentage = Column(Float)
+    avg_finance_term_months = Column(Float)
+    
+    recall_rate_percentage = Column(Float)
+    most_common_recall_category = Column(String(100))
+    
+    avg_annual_mileage = Column(Integer)
+    mileage_discrepancy_rate = Column(Float)
+    
+    auction_condition_distribution = Column(JSON)
+    
+    market_segment = Column(String(50))
+    target_demographic = Column(String(100))
+    
+    theft_risk_score = Column(Integer)
+    reliability_risk_score = Column(Integer)
+    financial_risk_score = Column(Integer)
+    overall_risk_score = Column(Integer)
+    
+    analysis_date = Column(DateTime, default=datetime.utcnow)
+    data_cutoff_date = Column(Date)
+    confidence_level = Column(Float)
+    
+    created_at = Column(DateTime, default=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    
+    __table_args__ = (
+        Index('ix_cluster_make_model', 'make', 'model'),
+        Index('ix_cluster_unique', 'make', 'model', 'year_range_start', 'year_range_end', unique=True),
+    )
+
+class VehicleClusterInsights(Base):
+    __tablename__ = 'vehicle_cluster_insights'
+    
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    cluster_analytics_id = Column(Integer, ForeignKey('vehicle_cluster_analytics.id'), index=True)
+    
+    insight_category = Column(String(50))
+    insight_type = Column(String(50))
+    severity = Column(String(20))
+    
+    insight_title = Column(String(200))
+    insight_description = Column(Text)
+    
+    supporting_statistic = Column(String(100))
+    sample_size = Column(Integer)
+    confidence_score = Column(Float)
+    
+    show_in_summary = Column(Boolean, default=True)
+    priority_order = Column(Integer, default=100)
+    
+    created_at = Column(DateTime, default=datetime.utcnow)
+    
+    __table_args__ = (
+        Index('ix_insights_cluster_category', 'cluster_analytics_id', 'insight_category'),
+    )
+
+class VehicleClusterMembership(Base):
+    __tablename__ = 'vehicle_cluster_membership'
+    
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    vehicle_id = Column(Integer, ForeignKey('vehicles.id'), index=True)
+    cluster_analytics_id = Column(Integer, ForeignKey('vehicle_cluster_analytics.id'), index=True)
+    
+    inclusion_date = Column(DateTime, default=datetime.utcnow)
+    
+    __table_args__ = (
+        Index('ix_unique_membership', 'vehicle_id', 'cluster_analytics_id', unique=True),
+    )
