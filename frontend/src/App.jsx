@@ -308,7 +308,7 @@ const App = () => {
                   {ai_insights.reliability_assessment?.score || 'N/A'}
                   <span className="text-base font-normal text-slate-500">/10</span>
                 </div>
-                <p className="text-slate-600 text-xs leading-snug">{ai_insights.reliability_assessment?.explanation || 'No explanation provided.'}</p>
+                <p className="text-slate-600 text-sm leading-snug">{ai_insights.reliability_assessment?.explanation || 'No explanation provided.'}</p>
               </div>
               <div className="bg-slate-50 rounded-lg p-4 border border-slate-200 hover:shadow-md transition-shadow md:w-1/3">
                 <div className="flex items-center mb-1.5">
@@ -316,7 +316,11 @@ const App = () => {
                   <h4 className="font-semibold text-slate-800 text-sm">Market Position</h4>
                 </div>
                 <p className="text-slate-700 font-medium text-base mt-1">{ai_insights.value_assessment?.current_market_position || 'N/A'}</p>
-                <p className="text-slate-600 text-xs mt-1">{ai_insights.value_assessment?.factors_affecting_value || 'No factors provided.'}</p>
+                <div className="mt-2">
+                  <div className="bg-slate-100 border border-slate-200 rounded p-2 text-xs text-slate-600">
+                    {ai_insights.value_assessment?.factors_affecting_value || 'No factors provided.'}
+                  </div>
+                </div>
               </div>
               {/* Owner Advice moved here */}
               <div className="bg-slate-50 rounded-lg p-4 border border-slate-200 hover:shadow-md transition-shadow md:w-1/3">
@@ -324,7 +328,7 @@ const App = () => {
                   <Award size={18} className="mr-2 text-sky-600" />
                   <h4 className="font-semibold text-slate-800 text-sm">Owner Advice</h4>
                 </div>
-                <p className="text-slate-600 text-xs leading-snug">{ai_insights.owner_advice || 'No specific owner advice available.'}</p>
+                <p className="text-slate-600 text-sm leading-snug">{ai_insights.owner_advice || 'No specific owner advice available.'}</p>
               </div>
             </div>
 
