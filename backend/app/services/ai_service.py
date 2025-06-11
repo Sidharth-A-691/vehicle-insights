@@ -121,10 +121,7 @@ Provide your analysis *strictly* in the following JSON format. Do not add any te
         "typical_maintenance": "Based on this car's actual service history and MOT records, what maintenance patterns are evident? Mention any finance payments if data is available.",
         "insurance_notes": "Reference the actual insurance group from the data. Comment on potential implications based on the car's specific features, history, theft records, and past claims.",
         "fuel_efficiency": "Use the actual CO2 emissions and fuel consumption figures from the data, not generic estimates."
-    }},
-    "technical_highlights": [
-        "List 2-3 key features of this SPECIFIC vehicle based on the actual specification data provided, not generic model information."
-    ]
+    }}
 }}
 
 EXAMPLES OF GOOD DATA-SPECIFIC INSIGHTS:
