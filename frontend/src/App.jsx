@@ -168,7 +168,7 @@ const App = () => {
       
       const vehicle = await get(endpointPath);
       setSelectedVehicle(vehicle);
-      setExpandedSections({
+      setExpandedSections({ // Reset expanded sections on new search
         basic: true,
         valuations: true,
         history: true,
@@ -211,9 +211,6 @@ const App = () => {
   const toggleSection = (section) => {
     setExpandedSections((prev) => {
       const newState = !prev[section];
-      if (section === 'basic' || section === 'valuations') {
-        return { ...prev, basic: newState, valuations: newState };
-      }
       return { ...prev, [section]: newState };
     });
   };
@@ -241,8 +238,12 @@ const App = () => {
       return <p className="text-center text-red-600">Basic vehicle information is missing.</p>;
     }
 
+    const keyInsightsFirstHalf = ai_insights.key_insights ? ai_insights.key_insights.slice(0, Math.ceil(ai_insights.key_insights.length / 2)) : [];
+    const keyInsightsSecondHalf = ai_insights.key_insights ? ai_insights.key_insights.slice(Math.ceil(ai_insights.key_insights.length / 2)) : [];
+
     return (
       <div className="space-y-6">
+        {/* Vehicle Card Header */}
         <div id="vehicle-card-header" className="bg-gradient-to-br from-slate-700 to-slate-800 rounded-xl p-6 text-white shadow-lg">
           <div className="flex items-center gap-4 mb-4">
             <Car size={40} className="text-sky-300" />
@@ -251,26 +252,27 @@ const App = () => {
               <p className="text-slate-300 text-md">{basic.variant || 'N/A'} • {basic.year || 'N/A'}</p>
             </div>
           </div>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mt-5">
-            <div className="bg-slate-600/50 rounded-lg p-3">
+          <div className="flex flex-wrap md:flex-nowrap -mx-1.5 mt-5 gap-y-3 md:gap-x-1">
+            <div className="bg-slate-600/50 rounded-lg p-3 px-1.5 w-1/2 md:w-1/4 mx-1.5 md:mx-0">
               <p className="text-slate-300 text-xs">VIN</p>
               <p className="font-semibold text-sm">{basic.vin || 'N/A'}</p>
             </div>
-            <div className="bg-slate-600/50 rounded-lg p-3">
+            <div className="bg-slate-600/50 rounded-lg p-3 px-1.5 w-1/2 md:w-1/4 mx-1.5 md:mx-0">
               <p className="text-slate-300 text-xs">VRM</p>
               <p className="font-semibold text-sm">{basic.vrm || 'N/A'}</p>
             </div>
-            <div className="bg-slate-600/50 rounded-lg p-3">
+            <div className="bg-slate-600/50 rounded-lg p-3 px-1.5 w-1/2 md:w-1/4 mx-1.5 md:mx-0">
               <p className="text-slate-300 text-xs">Status</p>
               <p className="font-semibold text-sm">{basic.vehicle_status || 'N/A'}</p>
             </div>
-            <div className="bg-slate-600/50 rounded-lg p-3">
+            <div className="bg-slate-600/50 rounded-lg p-3 px-1.5 w-1/2 md:w-1/4 mx-1.5 md:mx-0">
               <p className="text-slate-300 text-xs">Fuel Type</p>
               <p className="font-semibold text-sm">{basic.fuel_type || 'N/A'}</p>
             </div>
           </div>
         </div>
 
+        {/* AI-Powered Insights (Full Width) */}
         <div className="bg-white rounded-xl shadow-xl border border-slate-200">
           <div className="p-4 sm:p-6 border-b border-slate-200 flex items-center justify-between">
             <div className="flex items-center gap-3">
@@ -295,8 +297,9 @@ const App = () => {
                 </p>
               </div>
             </div>
-            <div className="grid md:grid-cols-3 gap-4">
-              <div className="bg-slate-50 rounded-lg p-4 border border-slate-200 hover:shadow-md transition-shadow">
+            
+            <div className="flex flex-col md:flex-row gap-4">
+              <div className="bg-slate-50 rounded-lg p-4 border border-slate-200 hover:shadow-md transition-shadow md:w-1/3">
                 <div className="flex items-center mb-1.5">
                   <ShieldCheck size={18} className="mr-2 text-sky-600" />
                   <h4 className="font-semibold text-slate-800 text-sm">Reliability</h4>
@@ -307,7 +310,7 @@ const App = () => {
                 </div>
                 <p className="text-slate-600 text-xs leading-snug">{ai_insights.reliability_assessment?.explanation || 'No explanation provided.'}</p>
               </div>
-              <div className="bg-slate-50 rounded-lg p-4 border border-slate-200 hover:shadow-md transition-shadow">
+              <div className="bg-slate-50 rounded-lg p-4 border border-slate-200 hover:shadow-md transition-shadow md:w-1/3">
                 <div className="flex items-center mb-1.5">
                   <TrendingUp size={18} className="mr-2 text-emerald-600" />
                   <h4 className="font-semibold text-slate-800 text-sm">Market Position</h4>
@@ -315,47 +318,50 @@ const App = () => {
                 <p className="text-slate-700 font-medium text-base mt-1">{ai_insights.value_assessment?.current_market_position || 'N/A'}</p>
                 <p className="text-slate-600 text-xs mt-1">{ai_insights.value_assessment?.factors_affecting_value || 'No factors provided.'}</p>
               </div>
-              <div className="bg-slate-50 rounded-lg p-4 border border-slate-200 hover:shadow-md transition-shadow">
+              {/* Owner Advice moved here */}
+              <div className="bg-slate-50 rounded-lg p-4 border border-slate-200 hover:shadow-md transition-shadow md:w-1/3">
                 <div className="flex items-center mb-1.5">
-                  <Cpu size={18} className="mr-2 text-slate-600" />
-                  <h4 className="font-semibold text-slate-800 text-sm">Technical Highlights</h4>
+                  <Award size={18} className="mr-2 text-sky-600" />
+                  <h4 className="font-semibold text-slate-800 text-sm">Owner Advice</h4>
                 </div>
-                {ai_insights.technical_highlights && ai_insights.technical_highlights.length > 0 ? (
-                  <ul className="text-slate-600 text-xs space-y-1 mt-2">
-                    {ai_insights.technical_highlights.slice(0, 3).map((highlight, index) => ( 
-                      <li key={index} className="flex items-start">
-                        <span className="mr-1.5 text-sky-500 mt-0.5">•</span>{highlight}
-                      </li>
-                    ))}
-                  </ul>
-                ) : <p className="text-slate-500 text-xs mt-1">No specific technical highlights available.</p>}
+                <p className="text-slate-600 text-xs leading-snug">{ai_insights.owner_advice || 'No specific owner advice available.'}</p>
               </div>
             </div>
-            <div className="grid md:grid-cols-2 gap-x-6 gap-y-5 pt-4 border-t border-slate-100">
-              <div>
-                <div className="flex items-center mb-2">
-                  <Lightbulb size={20} className="mr-2 text-amber-500" />
-                  <h4 className="font-semibold text-slate-800 text-md">Key Insights</h4>
-                </div>
-                {ai_insights.key_insights && ai_insights.key_insights.length > 0 ? (
-                  <ul className="space-y-2">
-                    {ai_insights.key_insights.map((insight, index) => (
-                      <li key={index} className="flex items-start text-slate-600 text-sm leading-relaxed">
-                        <CheckCircle2 size={16} className="mr-2 mt-1 text-emerald-500 flex-shrink-0" />
-                        <span>{insight}</span>
-                      </li>
-                    ))}
-                  </ul>
-                ) : <p className="text-slate-500 text-sm pl-8">No key insights available.</p>}
+
+            {/* Key Insights (Split Side-by-Side) */}
+            <div className="pt-4 border-t border-slate-100">
+              <div className="flex items-center mb-2">
+                <Lightbulb size={20} className="mr-2 text-amber-500" />
+                <h4 className="font-semibold text-slate-800 text-md">Key Insights</h4>
               </div>
-              <div>
-                <div className="flex items-center mb-2">
-                  <Award size={20} className="mr-2 text-sky-600" />
-                  <h4 className="font-semibold text-slate-800 text-md">Owner Advice</h4>
+              {ai_insights.key_insights && ai_insights.key_insights.length > 0 ? (
+                <div className="flex flex-col md:flex-row md:gap-x-6">
+                  <div className="md:w-1/2">
+                    <ul className="space-y-2">
+                      {keyInsightsFirstHalf.map((insight, index) => (
+                        <li key={`ki1-${index}`} className="flex items-start text-slate-600 text-sm leading-relaxed">
+                          <CheckCircle2 size={16} className="mr-2 mt-1 text-emerald-500 flex-shrink-0" />
+                          <span>{insight}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                  <div className="md:w-1/2">
+                    {keyInsightsSecondHalf.length > 0 && (
+                      <ul className="space-y-2 mt-2 md:mt-0">
+                        {keyInsightsSecondHalf.map((insight, index) => (
+                          <li key={`ki2-${index}`} className="flex items-start text-slate-600 text-sm leading-relaxed">
+                            <CheckCircle2 size={16} className="mr-2 mt-1 text-emerald-500 flex-shrink-0" />
+                            <span>{insight}</span>
+                          </li>
+                        ))}
+                      </ul>
+                    )}
+                  </div>
                 </div>
-                <p className="text-slate-600 text-sm leading-relaxed pl-8">{ai_insights.owner_advice || 'No specific owner advice available.'}</p>
-              </div>
+              ) : <p className="text-slate-500 text-sm pl-8">No key insights available.</p>}
             </div>
+            
             {ai_insights.attention_items && ai_insights.attention_items.length > 0 && (
               <div className="pt-4 border-t border-slate-100">
                 <div className="flex items-center mb-3">
@@ -393,8 +399,9 @@ const App = () => {
           </div>
         </div>
 
-        <div className="grid lg:grid-cols-2 gap-6">
-          <div className="bg-white rounded-xl shadow-lg border border-slate-200">
+        {/* Basic Info & Valuations (Side-by-side on lg) */}
+        <div className="flex flex-col lg:flex-row gap-6">
+          <div className="bg-white rounded-xl shadow-lg border border-slate-200 lg:w-1/2">
             <div
               className="p-4 sm:p-5 border-b border-slate-200 flex items-center justify-between cursor-pointer hover:bg-slate-50 transition-colors"
               onClick={() => toggleSection('basic')}
@@ -407,27 +414,27 @@ const App = () => {
             </div>
             {expandedSections.basic && (
               <div className="p-4 sm:p-5">
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm">
-                  <div><span className="text-slate-500">Make:</span><span className="ml-2 font-medium text-slate-700">{basic.make || 'N/A'}</span></div>
-                  <div><span className="text-slate-500">Model:</span><span className="ml-2 font-medium text-slate-700">{basic.model || 'N/A'}</span></div>
-                  <div><span className="text-slate-500">Year:</span><span className="ml-2 font-medium text-slate-700">{basic.year || 'N/A'}</span></div>
-                  <div><span className="text-slate-500">Body Type:</span><span className="ml-2 font-medium text-slate-700">{basic.body_type || 'N/A'}</span></div>
-                  <div><span className="text-slate-500">Fuel Type:</span><span className="ml-2 font-medium text-slate-700">{basic.fuel_type || 'N/A'}</span></div>
-                  <div><span className="text-slate-500">Transmission:</span><span className="ml-2 font-medium text-slate-700">{basic.transmission || 'N/A'}</span></div>
-                  <div><span className="text-slate-500">MOT Status:</span><span className={`ml-2 font-medium ${basic.mot_status === 'Valid' ? 'text-emerald-600' : 'text-rose-600'}`}>{basic.mot_status || 'N/A'}</span></div>
-                  <div><span className="text-slate-500">MOT Expiry:</span><span className="ml-2 font-medium text-slate-700">{basic.mot_expiry_date || 'N/A'}</span></div>
-                  <div><span className="text-slate-500">Tax Status:</span><span className={`ml-2 font-medium ${basic.tax_status === 'Taxed' ? 'text-emerald-600' : 'text-rose-600'}`}>{basic.tax_status || 'N/A'}</span></div>
-                  <div><span className="text-slate-500">Tax Due:</span><span className="ml-2 font-medium text-slate-700">{basic.tax_due_date || 'N/A'}</span></div>
-                  <div><span className="text-slate-500">Engine Size:</span><span className="ml-2 font-medium text-slate-700">{basic.engine_size || 'N/A'} L</span></div>
-                  <div><span className="text-slate-500">Power:</span><span className="ml-2 font-medium text-slate-700">{basic.engine_power_hp || 'N/A'} HP</span></div>
-                  <div><span className="text-slate-500">CO2 Emissions:</span><span className="ml-2 font-medium text-slate-700">{basic.co2_emissions || 'N/A'} g/km</span></div>
-                  <div><span className="text-slate-500">Insurance Group:</span><span className="ml-2 font-medium text-slate-700">{basic.insurance_group || 'N/A'}</span></div>
+                <div className="flex flex-wrap -mx-1.5 text-sm">
+                  <div className="w-full sm:w-1/2 px-1.5 pb-3"><span className="text-slate-500">Make:</span><span className="ml-2 font-medium text-slate-700">{basic.make || 'N/A'}</span></div>
+                  <div className="w-full sm:w-1/2 px-1.5 pb-3"><span className="text-slate-500">Model:</span><span className="ml-2 font-medium text-slate-700">{basic.model || 'N/A'}</span></div>
+                  <div className="w-full sm:w-1/2 px-1.5 pb-3"><span className="text-slate-500">Year:</span><span className="ml-2 font-medium text-slate-700">{basic.year || 'N/A'}</span></div>
+                  <div className="w-full sm:w-1/2 px-1.5 pb-3"><span className="text-slate-500">Body Type:</span><span className="ml-2 font-medium text-slate-700">{basic.body_type || 'N/A'}</span></div>
+                  <div className="w-full sm:w-1/2 px-1.5 pb-3"><span className="text-slate-500">Fuel Type:</span><span className="ml-2 font-medium text-slate-700">{basic.fuel_type || 'N/A'}</span></div>
+                  <div className="w-full sm:w-1/2 px-1.5 pb-3"><span className="text-slate-500">Transmission:</span><span className="ml-2 font-medium text-slate-700">{basic.transmission || 'N/A'}</span></div>
+                  <div className="w-full sm:w-1/2 px-1.5 pb-3"><span className="text-slate-500">MOT Status:</span><span className={`ml-2 font-medium ${basic.mot_status === 'Valid' ? 'text-emerald-600' : 'text-rose-600'}`}>{basic.mot_status || 'N/A'}</span></div>
+                  <div className="w-full sm:w-1/2 px-1.5 pb-3"><span className="text-slate-500">MOT Expiry:</span><span className="ml-2 font-medium text-slate-700">{basic.mot_expiry_date || 'N/A'}</span></div>
+                  <div className="w-full sm:w-1/2 px-1.5 pb-3"><span className="text-slate-500">Tax Status:</span><span className={`ml-2 font-medium ${basic.tax_status === 'Taxed' ? 'text-emerald-600' : 'text-rose-600'}`}>{basic.tax_status || 'N/A'}</span></div>
+                  <div className="w-full sm:w-1/2 px-1.5 pb-3"><span className="text-slate-500">Tax Due:</span><span className="ml-2 font-medium text-slate-700">{basic.tax_due_date || 'N/A'}</span></div>
+                  <div className="w-full sm:w-1/2 px-1.5 pb-3"><span className="text-slate-500">Engine Size:</span><span className="ml-2 font-medium text-slate-700">{basic.engine_size || 'N/A'} L</span></div>
+                  <div className="w-full sm:w-1/2 px-1.5 pb-3"><span className="text-slate-500">Power:</span><span className="ml-2 font-medium text-slate-700">{basic.engine_power_hp || 'N/A'} HP</span></div>
+                  <div className="w-full sm:w-1/2 px-1.5 pb-3"><span className="text-slate-500">CO2 Emissions:</span><span className="ml-2 font-medium text-slate-700">{basic.co2_emissions || 'N/A'} g/km</span></div>
+                  <div className="w-full sm:w-1/2 px-1.5 pb-3"><span className="text-slate-500">Insurance Group:</span><span className="ml-2 font-medium text-slate-700">{basic.insurance_group || 'N/A'}</span></div>
                 </div>
               </div>
             )}
           </div>
 
-          <div className="bg-white rounded-xl shadow-lg border border-slate-200">
+          <div className="bg-white rounded-xl shadow-lg border border-slate-200 lg:w-1/2">
             <div
               className="p-4 sm:p-5 border-b border-slate-200 flex items-center justify-between cursor-pointer hover:bg-slate-50 transition-colors"
               onClick={() => toggleSection('valuations')}
@@ -448,11 +455,11 @@ const App = () => {
                           <span className="font-medium text-slate-800 text-sm">{val.valuation_date || 'N/A'}</span>
                           <span className="text-xs text-slate-500">{val.condition_grade || 'N/A'}</span>
                         </div>
-                        <div className="grid grid-cols-2 gap-x-4 gap-y-2 text-sm">
-                          <div><span className="text-slate-500">Retail:</span><span className="ml-2 font-medium text-slate-700">{formatCurrency(val.retail_value)}</span></div>
-                          <div><span className="text-slate-500">Trade:</span><span className="ml-2 font-medium text-slate-700">{formatCurrency(val.trade_value)}</span></div>
-                          <div><span className="text-slate-500">Private:</span><span className="ml-2 font-medium text-slate-700">{formatCurrency(val.private_value)}</span></div>
-                          <div><span className="text-slate-500">Auction:</span><span className="ml-2 font-medium text-slate-700">{formatCurrency(val.auction_value)}</span></div>
+                        <div className="flex flex-wrap -mx-2 text-sm">
+                          <div className="w-1/2 px-2 pb-2"><span className="text-slate-500">Retail:</span><span className="ml-2 font-medium text-slate-700">{formatCurrency(val.retail_value)}</span></div>
+                          <div className="w-1/2 px-2 pb-2"><span className="text-slate-500">Trade:</span><span className="ml-2 font-medium text-slate-700">{formatCurrency(val.trade_value)}</span></div>
+                          <div className="w-1/2 px-2 pb-2"><span className="text-slate-500">Private:</span><span className="ml-2 font-medium text-slate-700">{formatCurrency(val.private_value)}</span></div>
+                          <div className="w-1/2 px-2 pb-2"><span className="text-slate-500">Auction:</span><span className="ml-2 font-medium text-slate-700">{formatCurrency(val.auction_value)}</span></div>
                         </div>
                         <div className="mt-1.5 text-xs text-slate-500">
                           Mileage: {val.mileage_at_valuation?.toLocaleString() || 'N/A'} • Source: {val.valuation_source || 'N/A'} • Confidence: {(val.confidence_score * 100).toFixed(0)}%
@@ -467,8 +474,10 @@ const App = () => {
             )}
           </div>
         </div>
-
-        <div className="space-y-6">
+        
+        {/* Grid for History and Recalls */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          {/* History Card */}
           <div className="bg-white rounded-xl shadow-lg border border-slate-200">
             <div
               className="p-4 sm:p-5 border-b border-slate-200 flex items-center justify-between cursor-pointer hover:bg-slate-50 transition-colors"
@@ -513,6 +522,7 @@ const App = () => {
             )}
           </div>
 
+          {/* Recalls Card */}
           <div className="bg-white rounded-xl shadow-lg border border-slate-200">
             <div
               className="p-4 sm:p-5 border-b border-slate-200 flex items-center justify-between cursor-pointer hover:bg-slate-50 transition-colors"
@@ -554,66 +564,71 @@ const App = () => {
               </div>
             )}
           </div>
+        </div>
 
-          <div className="bg-white rounded-xl shadow-lg border border-slate-200">
-            <div
-              className="p-4 sm:p-5 border-b border-slate-200 flex items-center justify-between cursor-pointer hover:bg-slate-50 transition-colors"
-              onClick={() => toggleSection('specifications')}
-            >
-              <div className="flex items-center gap-3">
-                <Settings className="text-slate-600" size={20} />
-                <h3 className="text-md font-semibold text-slate-800">Specifications</h3>
-              </div>
-              {expandedSections.specifications ? <ChevronUp size={20} className="text-slate-500" /> : <ChevronDown size={20} className="text-slate-500" />}
+        {/* Specifications Card (Full Width) */}
+        <div className="bg-white rounded-xl shadow-lg border border-slate-200">
+          <div
+            className="p-4 sm:p-5 border-b border-slate-200 flex items-center justify-between cursor-pointer hover:bg-slate-50 transition-colors"
+            onClick={() => toggleSection('specifications')}
+          >
+            <div className="flex items-center gap-3">
+              <Settings className="text-slate-600" size={20} />
+              <h3 className="text-md font-semibold text-slate-800">Specifications</h3>
             </div>
-            {expandedSections.specifications && (
-              <div className="p-4 sm:p-5">
-                {specifications ? (
-                  <div className="grid md:grid-cols-3 gap-x-6 gap-y-4">
-                    <div>
-                      <h4 className="font-medium text-slate-800 mb-2 text-sm">Dimensions</h4>
-                      <div className="space-y-1.5 text-xs text-slate-600">
-                        <div><span className="text-slate-500">Length:</span><span className="ml-2">{specifications.length_mm || 'N/A'} mm</span></div>
-                        <div><span className="text-slate-500">Width:</span><span className="ml-2">{specifications.width_mm || 'N/A'} mm</span></div>
-                        <div><span className="text-slate-500">Height:</span><span className="ml-2">{specifications.height_mm || 'N/A'} mm</span></div>
-                        <div><span className="text-slate-500">Wheelbase:</span><span className="ml-2">{specifications.wheelbase_mm || 'N/A'} mm</span></div>
-                      </div>
-                    </div>
-                    <div>
-                      <h4 className="font-medium text-slate-800 mb-2 text-sm">Performance</h4>
-                      <div className="space-y-1.5 text-xs text-slate-600">
-                        <div><span className="text-slate-500">Top Speed:</span><span className="ml-2">{specifications.top_speed_mph || 'N/A'} mph</span></div>
-                        <div><span className="text-slate-500">0-60 mph:</span><span className="ml-2">{specifications.acceleration_0_60_mph || 'N/A'} s</span></div>
-                        <div><span className="text-slate-500">Drive Type:</span><span className="ml-2">{specifications.drive_type || 'N/A'}</span></div>
-                        <div><span className="text-slate-500">Max Towing:</span><span className="ml-2">{specifications.max_towing_weight_kg || 'N/A'} kg</span></div>
-                      </div>
-                    </div>
-                    <div>
-                      <h4 className="font-medium text-slate-800 mb-2 text-sm">Capacity</h4>
-                      <div className="space-y-1.5 text-xs text-slate-600">
-                        <div><span className="text-slate-500">Fuel Tank:</span><span className="ml-2">{specifications.fuel_tank_capacity || 'N/A'} L</span></div>
-                        <div><span className="text-slate-500">Boot:</span><span className="ml-2">{specifications.boot_capacity_litres || 'N/A'} L</span></div>
-                        <div><span className="text-slate-500">Kerb Weight:</span><span className="ml-2">{specifications.kerb_weight_kg || 'N/A'} kg</span></div>
-                        <div><span className="text-slate-500">Gross Weight:</span><span className="ml-2">{specifications.gross_weight_kg || 'N/A'} kg</span></div>
-                      </div>
-                    </div>
-                    <div>
-                      <h4 className="font-medium text-slate-800 mb-2 text-sm">Safety & Systems</h4>
-                      <div className="space-y-1.5 text-xs text-slate-600">
-                        <div><span className="text-slate-500">Airbags:</span><span className="ml-2">{specifications.airbags || 'N/A'}</span></div>
-                        <div><span className="text-slate-500">ABS:</span><span className="ml-2">{specifications.abs ? 'Yes' : 'No'}</span></div>
-                        <div><span className="text-slate-500">ESP:</span><span className="ml-2">{specifications.esp ? 'Yes' : 'No'}</span></div>
-                        <div><span className="text-slate-500">Steering:</span><span className="ml-2">{specifications.steering_type || 'N/A'}</span></div>
-                      </div>
+            {expandedSections.specifications ? <ChevronUp size={20} className="text-slate-500" /> : <ChevronDown size={20} className="text-slate-500" />}
+          </div>
+          {expandedSections.specifications && (
+            <div className="p-4 sm:p-5">
+              {specifications ? (
+                <div className="flex flex-wrap -mx-3"> {/* Use flex-wrap for responsiveness */}
+                  <div className="w-full md:w-1/2 lg:w-1/4 px-3 pb-4">
+                    <h4 className="font-medium text-slate-800 mb-2 text-sm">Dimensions</h4>
+                    <div className="space-y-1.5 text-xs text-slate-600">
+                      <div><span className="text-slate-500">Length:</span><span className="ml-2">{specifications.length_mm || 'N/A'} mm</span></div>
+                      <div><span className="text-slate-500">Width:</span><span className="ml-2">{specifications.width_mm || 'N/A'} mm</span></div>
+                      <div><span className="text-slate-500">Height:</span><span className="ml-2">{specifications.height_mm || 'N/A'} mm</span></div>
+                      <div><span className="text-slate-500">Wheelbase:</span><span className="ml-2">{specifications.wheelbase_mm || 'N/A'} mm</span></div>
                     </div>
                   </div>
-                ) : (
-                  <p className="text-slate-500 text-center py-4 text-sm">No specification data available</p>
-                )}
-              </div>
-            )}
-          </div>
+                  <div className="w-full md:w-1/2 lg:w-1/4 px-3 pb-4">
+                    <h4 className="font-medium text-slate-800 mb-2 text-sm">Performance</h4>
+                    <div className="space-y-1.5 text-xs text-slate-600">
+                      <div><span className="text-slate-500">Top Speed:</span><span className="ml-2">{specifications.top_speed_mph || 'N/A'} mph</span></div>
+                      <div><span className="text-slate-500">0-60 mph:</span><span className="ml-2">{specifications.acceleration_0_60_mph || 'N/A'} s</span></div>
+                      <div><span className="text-slate-500">Drive Type:</span><span className="ml-2">{specifications.drive_type || 'N/A'}</span></div>
+                      <div><span className="text-slate-500">Max Towing:</span><span className="ml-2">{specifications.max_towing_weight_kg || 'N/A'} kg</span></div>
+                    </div>
+                  </div>
+                  <div className="w-full md:w-1/2 lg:w-1/4 px-3 pb-4">
+                    <h4 className="font-medium text-slate-800 mb-2 text-sm">Capacity</h4>
+                    <div className="space-y-1.5 text-xs text-slate-600">
+                      <div><span className="text-slate-500">Fuel Tank:</span><span className="ml-2">{specifications.fuel_tank_capacity || 'N/A'} L</span></div>
+                      <div><span className="text-slate-500">Boot:</span><span className="ml-2">{specifications.boot_capacity_litres || 'N/A'} L</span></div>
+                      <div><span className="text-slate-500">Kerb Weight:</span><span className="ml-2">{specifications.kerb_weight_kg || 'N/A'} kg</span></div>
+                      <div><span className="text-slate-500">Gross Weight:</span><span className="ml-2">{specifications.gross_weight_kg || 'N/A'} kg</span></div>
+                    </div>
+                  </div>
+                  <div className="w-full md:w-1/2 lg:w-1/4 px-3 pb-4">
+                    <h4 className="font-medium text-slate-800 mb-2 text-sm">Safety & Systems</h4>
+                    <div className="space-y-1.5 text-xs text-slate-600">
+                      <div><span className="text-slate-500">Airbags:</span><span className="ml-2">{specifications.airbags || 'N/A'}</span></div>
+                      <div><span className="text-slate-500">ABS:</span><span className="ml-2">{specifications.abs ? 'Yes' : 'No'}</span></div>
+                      <div><span className="text-slate-500">ESP:</span><span className="ml-2">{specifications.esp ? 'Yes' : 'No'}</span></div>
+                      <div><span className="text-slate-500">Steering:</span><span className="ml-2">{specifications.steering_type || 'N/A'}</span></div>
+                    </div>
+                  </div>
+                </div>
+              ) : (
+                <p className="text-slate-500 text-center py-4 text-sm">No specification data available</p>
+              )}
+            </div>
+          )}
+        </div>
 
+        {/* Grid for remaining data cards */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          {/* Ownership History Card */}
           <div className="bg-white rounded-xl shadow-lg border border-slate-200">
             <div
               className="p-4 sm:p-5 border-b border-slate-200 flex items-center justify-between cursor-pointer hover:bg-slate-50 transition-colors"
@@ -651,6 +666,7 @@ const App = () => {
             )}
           </div>
 
+          {/* Theft Records Card */}
           <div className="bg-white rounded-xl shadow-lg border border-slate-200">
             <div
               className="p-4 sm:p-5 border-b border-slate-200 flex items-center justify-between cursor-pointer hover:bg-slate-50 transition-colors"
@@ -695,13 +711,14 @@ const App = () => {
             )}
           </div>
 
+          {/* Insurance Claims Card */}
           <div className="bg-white rounded-xl shadow-lg border border-slate-200">
             <div
               className="p-4 sm:p-5 border-b border-slate-200 flex items-center justify-between cursor-pointer hover:bg-slate-50 transition-colors"
               onClick={() => toggleSection('insurance_claims')}
             >
               <div className="flex items-center gap-3">
-                <Shield className="text-amber-600" size={20} />
+                <Shield className="text-amber-600" size={20} /> {/* Icon changed from Zap to Shield for consistency, or keep Zap if distinct meaning */}
                 <h3 className="text-md font-semibold text-slate-800">Insurance Claims</h3>
               </div>
               {expandedSections.insurance_claims ? <ChevronUp size={20} className="text-slate-500" /> : <ChevronDown size={20} className="text-slate-500" />}
@@ -740,6 +757,7 @@ const App = () => {
             )}
           </div>
 
+          {/* Mileage Records Card */}
           <div className="bg-white rounded-xl shadow-lg border border-slate-200">
             <div
               className="p-4 sm:p-5 border-b border-slate-200 flex items-center justify-between cursor-pointer hover:bg-slate-50 transition-colors"
@@ -777,6 +795,7 @@ const App = () => {
             )}
           </div>
 
+          {/* Finance Records Card */}
           <div className="bg-white rounded-xl shadow-lg border border-slate-200">
             <div
               className="p-4 sm:p-5 border-b border-slate-200 flex items-center justify-between cursor-pointer hover:bg-slate-50 transition-colors"
@@ -820,6 +839,7 @@ const App = () => {
             )}
           </div>
 
+          {/* Auction Records Card */}
           <div className="bg-white rounded-xl shadow-lg border border-slate-200">
             <div
               className="p-4 sm:p-5 border-b border-slate-200 flex items-center justify-between cursor-pointer hover:bg-slate-50 transition-colors"
@@ -856,10 +876,11 @@ const App = () => {
               </div>
             )}
           </div>
-        </div>
+        </div> {/* End of grid for remaining data cards */}
       </div>
     );
   };
+  
 
   return (
     <div className="min-h-screen bg-slate-100">
