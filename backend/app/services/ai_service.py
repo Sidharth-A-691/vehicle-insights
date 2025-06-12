@@ -102,6 +102,8 @@ Provide your analysis *strictly* in the following JSON format. Do not add any te
 
 {{
     "summary": "A detailed analysis of THIS SPECIFIC VEHICLE based on its actual history, focusing on what has actually happened to it. Reference specific events, dates, mileage, recalls, ownership changes, finance status, theft incidents, and insurance claims from the data. Make it conversational but data-driven in 2-3 paragraphs. Highlight any major events like theft, total loss claims, or outstanding finance.",
+    "overall_score": "Rate 1-10 based on all factors, like an overall score"
+    "overall_score_explaination": "Briefly explain the score based on the information."
     "key_insights": [
         "List 6 key insights about what this SPECIFIC vehicle has been through. Reference actual dates, mileage, MOT results, recall completions, service history, ownership changes, theft incidents (with status), insurance claims (total loss, fault), finance status (outstanding, type), auction results. Focus on practical aspects like reliability, maintenance, costs, performance, security, and financial encumbrances. Each insight should be based on the actual data provided."
     ],
@@ -112,7 +114,9 @@ Provide your analysis *strictly* in the following JSON format. Do not add any te
     }},
     "value_assessment": {{
         "current_market_position": "Based on the ACTUAL valuation data provided, how has this car's value changed over time? Reference specific figures and dates. Consider impact of finance status, theft history, total loss claims, and auction results if available.",
-        "factors_affecting_value": "What factors from this car's ACTUAL history affect its value (mileage increases, condition grades, MOT history, recall status, ownership changes, finance outstanding, theft history, insurance total loss claims, auction sales data, etc.)."
+        "factors_affecting_value": "What factors from this car's ACTUAL history affect its value (mileage increases, condition grades, MOT history, recall status, ownership changes, finance outstanding, theft history, insurance total loss claims, auction sales data, etc.).",
+        "score": "Rate 1-10 based on the ACTUAL valuation data provided for this specific vehicle",
+        "roi": "Calculate the Return on Investment of this vehicle based on all the valuation data provided."
     }},
     "attention_items": [
         "List specific items based on the actual data: exact MOT due dates, outstanding recall numbers with descriptions, specific advisory notes from MOT history, details of any outstanding finance (type, company), active theft status, upcoming finance agreement end dates. Be precise with dates, recall numbers, and descriptions."
