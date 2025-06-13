@@ -341,104 +341,72 @@ class VehicleAISummary(Base):
 
     vehicle = relationship("Vehicle", back_populates="ai_summary")
 
-class VehicleClusterAnalytics(Base):
-    __tablename__ = 'vehicle_cluster_analytics'
+class VehicleClusterAnalysis(Base):
+    __tablename__ = 'vehicle_cluster_analysis'
     
     id = Column(Integer, primary_key=True, autoincrement=True)
-    
-    make = Column(String(50), index=True)
-    model = Column(String(100), index=True)
-    year_range_start = Column(Integer)
-    year_range_end = Column(Integer)
-    body_type = Column(String(30))
+    search_query = Column(String(200), index=True)  # e.g., "volkswagen polo", "white sedan"
+    search_hash = Column(String(64), unique=True, index=True)  # Hash of normalized search query
     
     total_vehicles_analyzed = Column(Integer)
-    
-    theft_rate_percentage = Column(Float)
-    most_common_theft_location = Column(String(50))
-    avg_days_to_recovery = Column(Float)
-    theft_recovery_rate = Column(Float)
-    
-    claim_rate_percentage = Column(Float)
-    most_common_claim_type = Column(String(50))
-    avg_claim_amount = Column(Float)
-    total_loss_rate = Column(Float)
-    
-    first_mot_pass_rate = Column(Float)
-    most_common_mot_failure_reason = Column(String(100))
-    avg_mot_failure_cost = Column(Float)
-    
-    avg_ownership_duration_months = Column(Float)
-    most_common_ownership_change_type = Column(String(50))
-    fleet_vehicle_percentage = Column(Float)
-    
-    avg_depreciation_rate_per_year = Column(Float)
-    finance_percentage = Column(Float)
-    avg_finance_term_months = Column(Float)
-    
-    recall_rate_percentage = Column(Float)
-    most_common_recall_category = Column(String(100))
-    
-    avg_annual_mileage = Column(Integer)
-    mileage_discrepancy_rate = Column(Float)
-    
-    auction_condition_distribution = Column(JSON)
-    
-    market_segment = Column(String(50))
-    target_demographic = Column(String(100))
-    
-    theft_risk_score = Column(Integer)
-    reliability_risk_score = Column(Integer)
-    financial_risk_score = Column(Integer)
-    overall_risk_score = Column(Integer)
-    
+    clusters_found = Column(Integer)
     analysis_date = Column(DateTime, default=datetime.utcnow)
-    data_cutoff_date = Column(Date)
-    confidence_level = Column(Float)
+    
+    # Store the clustering parameters used
+    clustering_algorithm = Column(String(50), default='DBSCAN')
+    algorithm_parameters = Column(JSON)  # Store DBSCAN eps, min_samples etc.
     
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
     
-    __table_args__ = (
-        Index('ix_cluster_make_model', 'make', 'model'),
-        Index('ix_cluster_unique', 'make', 'model', 'year_range_start', 'year_range_end', unique=True),
-    )
+    # Relationships
+    patterns = relationship("VehiclePattern", back_populates="analysis")
+    vehicle_clusters = relationship("VehicleClusterMembership", back_populates="analysis")
 
-class VehicleClusterInsights(Base):
-    __tablename__ = 'vehicle_cluster_insights'
+class VehiclePattern(Base):
+    __tablename__ = 'vehicle_patterns'
     
     id = Column(Integer, primary_key=True, autoincrement=True)
-    cluster_analytics_id = Column(Integer, ForeignKey('vehicle_cluster_analytics.id'), index=True)
+    analysis_id = Column(Integer, ForeignKey('vehicle_cluster_analysis.id'), index=True)
     
-    insight_category = Column(String(50))
-    insight_type = Column(String(50))
-    severity = Column(String(20))
+    cluster_id = Column(Integer)  # -1 for outliers in DBSCAN
+    pattern_type = Column(String(50))  # 'theft', 'insurance_claim', 'ownership_change', 'high_mileage', etc.
+    pattern_description = Column(Text)
     
-    insight_title = Column(String(200))
-    insight_description = Column(Text)
+    # Pattern characteristics
+    vehicles_in_pattern = Column(Integer)
+    pattern_strength = Column(Float)  # 0-1 score indicating how strong the pattern is
+    statistical_significance = Column(Float)  # p-value or confidence score
     
-    supporting_statistic = Column(String(100))
-    sample_size = Column(Integer)
-    confidence_score = Column(Float)
+    # Common characteristics of vehicles in this pattern
+    common_characteristics = Column(JSON)  # Store dict of common features
     
-    show_in_summary = Column(Boolean, default=True)
-    priority_order = Column(Integer, default=100)
+    # Pattern-specific metrics
+    pattern_metrics = Column(JSON)  # Store specific metrics like theft_rate, avg_claim_amount, etc.
     
     created_at = Column(DateTime, default=datetime.utcnow)
     
-    __table_args__ = (
-        Index('ix_insights_cluster_category', 'cluster_analytics_id', 'insight_category'),
-    )
+    analysis = relationship("VehicleClusterAnalysis", back_populates="patterns")
 
 class VehicleClusterMembership(Base):
     __tablename__ = 'vehicle_cluster_membership'
     
     id = Column(Integer, primary_key=True, autoincrement=True)
+    analysis_id = Column(Integer, ForeignKey('vehicle_cluster_analysis.id'), index=True)
     vehicle_id = Column(Integer, ForeignKey('vehicles.id'), index=True)
-    cluster_analytics_id = Column(Integer, ForeignKey('vehicle_cluster_analytics.id'), index=True)
     
-    inclusion_date = Column(DateTime, default=datetime.utcnow)
+    cluster_id = Column(Integer)  # -1 for outliers
+    distance_to_centroid = Column(Float)  # How close to cluster center
+    
+    # Store the vehicle's feature vector used in clustering
+    feature_vector = Column(JSON)
+    
+    created_at = Column(DateTime, default=datetime.utcnow)
+    
+    analysis = relationship("VehicleClusterAnalysis", back_populates="vehicle_clusters")
+    vehicle = relationship("Vehicle")
     
     __table_args__ = (
-        Index('ix_unique_membership', 'vehicle_id', 'cluster_analytics_id', unique=True),
+        Index('ix_cluster_analysis_vehicle', 'analysis_id', 'vehicle_id'),
+        Index('ix_cluster_analysis_cluster', 'analysis_id', 'cluster_id'),
     )

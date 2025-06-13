@@ -28,10 +28,12 @@ class VehicleInsightsOutputParser(StrOutputParser):
             
             return {
                 "summary": "Error: AI could not generate a structured summary. The raw output was: " + text,
+                "overall_score": "N/A",
+                "overall_score_explaination": "N/A",
                 "key_insights": [],
                 "owner_advice": "",
                 "reliability_assessment": {"score": "N/A", "explanation": "Data parsing error"},
-                "value_assessment": {"current_market_position": "N/A", "factors_affecting_value": "Data parsing error"},
+                "value_assessment": {"current_market_position": "N/A", "factors_affecting_value": "Data parsing error","score":"N/A", "roi": "N/A"},
                 "attention_items": ["Data parsing error"],
                 "cost_insights": {"typical_maintenance": "N/A", "insurance_notes": "N/A", "fuel_efficiency": "N/A"},
                 "technical_highlights": [],
@@ -289,6 +291,8 @@ VEHICLE CONTEXT SUMMARY:
         return {
             "summary": f"This is a {basic_info.get('year', 'Unknown year')} {basic_info.get('make', 'Unknown make')} {basic_info.get('model', 'Unknown model')}. " +
                       "We encountered an issue generating detailed AI insights at this time. Basic vehicle data is still available.",
+            "overall_score": "N/A",
+            "overall_score_explaination": "N/A",
             "key_insights": [
                 "Vehicle information was retrieved from records.",
                 "Detailed AI-powered analysis is temporarily unavailable.",
@@ -301,7 +305,9 @@ VEHICLE CONTEXT SUMMARY:
             },
             "value_assessment": {
                 "current_market_position": "AI value assessment is currently unavailable. See 'detailed_data' for any valuation records.",
-                "factors_affecting_value": "Standard factors like age, mileage, condition, service history, ownership, finance, theft and claims typically affect value."
+                "factors_affecting_value": "Standard factors like age, mileage, condition, service history, ownership, finance, theft and claims typically affect value.",
+                "score":"N/A", 
+                "roi": "N/A"
             },
             "attention_items": ["Check 'detailed_data' for MOT/Tax due dates and any recall, finance, or theft information."],
             "cost_insights": {

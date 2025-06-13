@@ -197,6 +197,8 @@ class CostInsights(BaseModel):
 
 class AIInsights(BaseModel):
     summary: str = Field(..., description="User-friendly vehicle summary")
+    overall_score: str = Field(..., description="An overall score based on all the data")
+    overall_score_explaination:  str = Field(..., description="Explaination for the score given")
     key_insights: List[str] = Field(default_factory=list, description="Key insights about the vehicle")
     owner_advice: str = Field(..., description="Personalized advice for the owner")
     reliability_assessment: Optional[ReliabilityAssessment] = None
