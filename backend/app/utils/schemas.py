@@ -189,6 +189,8 @@ class ReliabilityAssessment(BaseModel):
 class ValueAssessment(BaseModel):
     current_market_position: str = Field(..., description="Current market position")
     factors_affecting_value: str = Field(..., description="Factors affecting vehicle value")
+    score: str = Field(..., description="Value assessment score 1-10 or N/A")
+    roi: str = Field(..., description="Return on Investment of this vehicle based on all the valuation data provided") 
 
 class CostInsights(BaseModel):
     typical_maintenance: str = Field(..., description="Typical maintenance costs")
